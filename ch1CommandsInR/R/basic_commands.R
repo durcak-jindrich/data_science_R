@@ -38,3 +38,25 @@ v[c(T,F,F,T,T)]
 v %% 2
 v[v %% 2 == 0]
 v[-(1:3)] #get the complement of indeces
+
+#give vector indices names - more indexing possiblities by name of column
+v = c("A" = 1, "B" = 2, "C" = 3)
+v["A"]
+names(v) = c('x','y','z')
+v['x']
+names(v)
+
+#vector expressions
+x <- 1:3
+y <- 6:8
+x ** 2 - y
+#The way expressions work, when vectors do not have the same length,
+# is that you just repeat the shorter vector as many times as you need
+(x <- 1:4)
+(y <- 1:2)
+x - y
+#If the length of the longer vector is not a multiple of the length of
+# the shorter, you get a warning
+(x <- 1:4)
+(y <- 1:3)
+x - y
