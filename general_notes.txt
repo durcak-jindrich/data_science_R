@@ -1,0 +1,4 @@
+literate programming - The idea in literate programming is that the documentation of a program—in the sense of the documentation of how the program works and how algorithms and data structures in the program works—is written together with the code implementing the program
+- R Markdown (for writing these documents) and knitr (for running the analysis and generating the reports)
+- knitr takes the markdown document, translates it into HTML file and opens it (the HTML file is saved)
+- if you give r code chunks a name, they are easily located by clicking on the structure button in the bar below the document

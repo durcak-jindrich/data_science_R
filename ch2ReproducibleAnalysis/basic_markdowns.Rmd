@@ -1,0 +1,120 @@
+---
+title: "Basic markdown"
+author: "Jindra"
+date: "11/17/2017"
+output: html_document
+---
+# Header big
+## Header medium
+### Header small
+
+* list (space between asterix and text!)
+* are
+    * very (2 tabs are neccesary = 4 spaces)
+   * (sometimes) - don't forget 4 spaces!
+* easy
+
+Numbered list
+
+1. first
+2. second
+3. third
+
+The numbers don' really mattet (only the first one, others are auto-incremented)
+
+1. still
+3. from 
+778. one to three
+
+4. This is a
+4. numbered
+4. list from 4 to 6
+
+## Tables
+| First Header  | Second Header   | Third Header    |
+| :------------ | :-------------: | --------------: |
+| First row     | Centered text   | Right justified |
+| Second row    | _italic_        | *also italic*   |
+| Third row     | __bold__        | **also bold**   |
+
+
+## Links
+[google site](http://www.google.com)
+
+for images:
+
+![Data science rules](http://www.easypurl.info/wp-content/uploads/2015/05/DS.wordle.png)
+
+If the link is too long:
+
+This is some text [with a link to youtube][1].
+The link tag is defined below the paragraph.
+
+Text can be used as a tag
+This is some text [with a link to seznam][interesting].
+The link tag is defined below the paragraph.
+
+[1]: http://www.youtube.com
+[interesting]: http://www.seznam.cz
+
+## Quotes
+
+> This is a
+> block quote
+
+## Verbatim input
+```
+block
+of text
+```
+
+Use it with programming languages
+```r
+f <- function(x) ifelse(x %% 2 == 0, x**2, x**3)
+f(2)
+```
+
+## Cross referencing
+[First section][Header big]
+
+### Cross referencing {#section-cross-ref}
+if the names are not unique, use curly brackets
+[this section](#section-cross-ref)
+
+## R coding
+This will only display the code
+```r
+2+2
+```
+
+This will evaluate a single line
+
+`r 2+2`
+
+For chunk of code, use curly brackets - it will display the code and then the result
+```{r}
+2+2
+```
+
+You can name code chunks by putting a name right after r
+```{r cars}
+summary(cars)
+```
+
+##Showing results
+```{r}
+library(knitr)
+kable(head(cars))
+```
+
+##Caching
+```{r first_cache, cache=TRUE}
+#when cached and unaltered, these random numbers should be the same
+(x = rnorm(3))
+```
+
+Add dependencies to the first chunk and try if something changes if the first chunk is altered
+
+```{r child_chunk, dependson='first_cache'}
+mean(x)
+```
