@@ -1,0 +1,45 @@
+---
+title: "Reading data 2"
+author: "Jindra"
+date: "11/19/2017"
+output: html_document
+---
+
+## Boston housing dataset
+```{r}
+library(mlbench)
+library(magrittr)
+data("BostonHousing")
+#summary(BostonHousing)
+#BostonHousing %>% str
+```
+
+## Get the data from URL
+```{r}
+data_url = "http://tinyurl.com/zq2u8vx"
+#it consists of whitespace-separated columns of data, so the function you need to load it is read.table().
+boston_housing = read.table(data_url)
+str(boston_housing)
+#the columns don't have the right names - colClass needs to be specified
+col_classes = rep("numeric", length(BostonHousing))
+col_classes[which("chas" == names(BostonHousing))] = "factor"
+
+#a little cheat again - get the column names from mlbench data library
+boston_housing <- read.table(data_url,
+                             col.names = names(BostonHousing),
+                             colClasses = col_classes)
+str(boston_housing)
+```
+
+## The readr package - speeds up importing and wants to be more consistent
+It implements the same class of import functions as the built-in functions. It just uses underscores instead of dots in the function names
+```{r}
+#install.packages("readr")
+library(readr)
+raw_breast_cancer = read_csv("data/raw-breast-cancer.csv")
+raw_breast_cancer %>% head(3)
+
+#column names needs to be specified, there is no header option this time
+raw_breast_cancer = read_csv("data/raw-breast-cancer.csv", col_names = names(BreastCancer))
+raw_breast_cancer %>% head(3)
+```

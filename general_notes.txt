@@ -2,3 +2,8 @@ literate programming - The idea in literate programming is that the documentatio
 - R Markdown (for writing these documents) and knitr (for running the analysis and generating the reports)
 - knitr takes the markdown document, translates it into HTML file and opens it (the HTML file is saved)
 - if you give r code chunks a name, they are easily located by clicking on the structure button in the bar below the document
+- if a package is loaded into current project, it's functions will work when a chunk of code is run. But if knit is used to build HTML from the markdown file, the import of that file needs to be specifically done in the markdown file (library(package))
+
+factors
+-It is not strictly necessary to specify the levels in the factor() call, but I prefer always to do so explicitly. If there is an unexpected string in the input to factor(), it would end up being one of the levels, and I wouldn’t know about it until much later. Specifying the levels explicitly alleviates that problem.
+

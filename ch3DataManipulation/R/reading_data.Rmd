@@ -1,0 +1,135 @@
+---
+title: "Reading Data"
+author: "Jindra"
+date: "11/19/2017"
+output: html_document
+---
+
+### Data Reading
+If the data format is a standard table format, use built-in functions
+```{r}
+?read.table
+```
+
+### Reading and formatting datasets
+```{r}
+library(mlbench)
+data(BreastCancer)
+
+library(magrittr)
+BreastCancer %>% head(3)
+```
+
+### Read data from a URL
+```{r}
+data_url = "http://tinyurl.com/kw4xtts"
+lines = readLines(data_url)
+lines[1:5]
+```
+
+### Save the data to a file (target folder needs to be created first)
+```{r}
+#make sure that your working directory is set properly
+getwd()
+# if necessary - setwd()
+writeLines(lines, con = "data/raw-breast-cancer.csv") #you can use tab completion
+```
+
+### Read the created csv file
+```{r}
+raw_breast_cancer <- read.csv("data/raw-breast-cancer.csv")
+raw_breast_cancer %>% head(3)
+```
+
+The data can be of course read straigh from the URL, since it is a csv in first place
+```{r}
+raw_breast_cancer_url <- read.csv(data_url)
+raw_breast_cancer_url %>% head(4)
+```
+
+First line in BreastCancer seems to have been turned into column names, fix it with header parameter
+```{r}
+raw_breast_cancer <- read.csv("data/raw-breast-cancer.csv", header = FALSE)
+raw_breast_cancer %>% head(3)
+```
+
+Now the first line is not used for the header, but we still don't know what are the columns
+Normally, we would find metadata, here we will cheat and use the dataset from mlbench
+```{r}
+names(raw_breast_cancer) = names(BreastCancer)
+raw_breast_cancer %>% head(3)
+#it can be set also during loading
+#raw_breast_cancer <- read.csv(data_url, header = FALSE, col.names = names(BreastCancer))
+```
+
+
+### More data cleaning
+The Class column is not right - we have numbers (2 and 4), but it means (benign and malign) - let's copy the data, since we don't want to modify original data, and change it
+```{r}
+formatted_breast_cancer = raw_breast_cancer
+formatted_breast_cancer$Class %>% unique
+#2 and 4 are the only values
+map_class <- function(x){
+  ifelse(x == 2,'benign','malign')
+  #the result does not need to be assigned to a variable, if it is the last value
+  #x = ifelse(x == 2,'benign','malign')
+  #the safer way of doing this would be inlcusion of possible NAs, if more possibilies would be in data accidentaly
+  #ifelse(x == 2, 'benign',ifelse(x == 4, 'malign', NA))
+}
+mapped = formatted_breast_cancer$Class %>% map_class
+mapped %>% head(6)
+mapped %>% table
+```
+
+Other option of data cleaning would be dictionaries
+```{r}
+dict = c("2" = "benign", "4" = "malign")
+#new map funciton
+map_class = function(x) dict[as.character(x)]
+mapped = formatted_breast_cancer$Class %>% map_class
+mapped %>% table
+#the vector looks a little strange though...
+mapped[1:5]
+#This is because when we create a vector by mapping in this way we preserve the names of the values.
+mapped %<>% unname
+mapped[1:5]
+```
+
+Now we just need to translate this vector of strings into a factor
+```{r}
+formatted_breast_cancer$Class = mapped %>% factor(levels = c("benign","malign"))
+formatted_breast_cancer %>% head(3)
+```
+
+### The whole process in one chunk
+```{r}
+read.csv(data_url, header = FALSE,
+         col.names = names(BreastCancer)) ->
+  raw_breast_cancer ->
+  formatted_breast_cancer
+
+dict <- c("2" = "benign", "4" = "malignant")
+map_class <- function(x) dict[as.character(x)]
+formatted_breast_cancer$Class <-
+  formatted_breast_cancer$Class %>%
+  map_class %>%
+  unname %>%
+  factor(levels = c("benign", "malignant"))
+
+#it can be also saved - .rda stands for R data
+formatted_breast_cancer %>% save(file = "data/formatted-breast-cancer.rda")
+
+#the load function gets even the original variable name, so it is not needed to assign the result to a new variable
+#load("data/formatted-breast-cancer.rda")
+```
+
+## With anonymous function - if we don't want to name map_class
+```{r}
+raw_breast_cancer$Class %>%
+  { dict <- c("2" = "benign", "4" = "malignant")
+    dict[as.character(.)]
+  } %>%
+  unname %>%
+  factor(levels = c("benign", "malignant")) %>%
+  table
+```
