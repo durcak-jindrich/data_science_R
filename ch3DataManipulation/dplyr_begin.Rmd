@@ -1,0 +1,110 @@
+---
+title: "dplyr package lesson"
+author: "Jindra"
+date: "11/20/2017"
+output: html_document
+---
+# Manipulating data with dplyr
+```{r}
+#install.packages("dplyr")
+library(dplyr,quietly = TRUE, warn.conflicts = FALSE) #no loading messages
+#useful dplyr funtions
+iris %>% tbl_df
+iris %>% tbl_df %>% select(Petal.Width) %>% head(3)
+iris %>% tbl_df %>% select(Sepal.Width,Petal.Width) %>% head(3)
+iris %>% tbl_df %>% select(Sepal.Width:Petal.Width) %>% head(3) #column range
+# pattern matching, regex
+iris %>% tbl_df %>% select(starts_with("Petal")) %>% head(3)
+iris %>% tbl_df %>% select(-starts_with("Petal")) %>% head(3) #exlude them
+iris %>% tbl_df %>% select(ends_with("Width")) %>% head(3)
+iris %>% tbl_df %>% select(contains("etal")) %>% head(3)
+iris %>% tbl_df %>% select(matches(".t.")) %>% head(3)
+```
+
+## More dplyr functions
+```{r}
+# add values to data frame - mutate()
+iris %>% tbl_df %>% mutate(Petal.Width.plus.Length = Petal.Width + Petal.Length) %>%
+  select(Species, Petal.Width.plus.Length) %>%
+  head(3)
+iris %>% tbl_df %>% mutate(Petal.Width.plus.Length = Petal.Width + Petal.Length,
+                           Sepal.Width.plus.Length = Sepal.Width + Sepal.Length) %>%
+  select(Species, Petal.Width.plus.Length, Sepal.Width.plus.Length) %>%
+  head(3)
+
+# add values and get rid of rest - transmute()
+iris %>% tbl_df %>% 
+  transmute(Petal.Width.plus.Lenth = Petal.Width + Petal.Length) %>%
+  head(3)
+
+#reorder data by sorting columns - arrange()
+iris %>% tbl_df %>% arrange(Sepal.Length) %>% head(3) #rows are sorted in increasing order
+iris %>% tbl_df %>% arrange(desc(Sepal.Length)) %>% head(3)
+
+#pick selected rows and get rid off rest - filter()
+iris %>% tbl_df %>% filter(Sepal.Length > 5) %>% head(3)
+iris %>% tbl_df %>%
+  filter(Sepal.Length > 5 & Species == "virginica") %>%
+  select(Species, Sepal.Length) %>%
+  head(3)
+
+# split data into subtables based on olumn values -  group_by()
+iris %>% tbl_df %>% group_by(Species) %>% head(3)
+
+#calculate summary statistics - summarize()\summarize() (most powerful with group_by)
+iris %>% summarise(Mean.Petal.Length = mean(Petal.Length),
+                   Mean.Sepal.Length = mean(Sepal.Length))
+iris %>% #tbl_df can be used, but it works even without it
+  group_by(Species) %>%
+  summarise(Mean.Petal.Length = mean(Petal.Length))
+iris %>% summarise(Observations = n()) #n() counts all the observations in data
+iris %>% group_by(Species) %>% summarise(Count.of.Items = n())
+iris %>%
+  group_by(Species) %>%
+  summarise(Number.Of.Samples = n(),
+              Mean.Petal.Length = mean(Petal.Length))
+```
+
+## Cleaning of raw data
+```{r}
+library(mlbench)
+data("BreastCancer")
+raw_breast_cancer = read.csv("R/data/raw-breast-cancer.csv")
+names(raw_breast_cancer) = names(BreastCancer)
+formatted_breast_cancer <-
+  raw_breast_cancer %>%
+  mutate(Class = Class %>% {
+    c("2" = "benign", "4" = "malignant")[as.character(.)]
+    } %>%
+    unname %>%
+    factor(c("benign","malignant")))
+```
+
+## Start the analysis
+```{r}
+#is cell thickness important?
+formatted_breast_cancer %>%
+  group_by(Class) %>%
+  summarise(Mean.thickness = mean(Cl.thickness))
+
+#how many entries are there for each cell size and class
+formatted_breast_cancer %>%
+  arrange(Cell.size) %>%
+  group_by(Cell.size, Class) %>%
+  summarise(ClassCount = n())
+
+#how the cell thickness behaves as a function of both class and cell size
+formatted_breast_cancer %>%
+  group_by(Class, as.factor(Cell.size)) %>%
+  summarize(mean.thickness = mean(Cl.thickness))
+
+#previous results were not helpful, modify it
+formatted_breast_cancer %>%
+  group_by(as.factor(Cell.size), Class) %>%
+  summarise(mean.thickness = mean(Cl.thickness))
+#it works the same even without the as.factor - only the column type is different
+#formatted_breast_cancer %>%
+#  group_by(Cell.size, Class) %>%
+#  summarise(mean.thickness = mean(Cl.thickness))
+```
+it looks like for each cell size where we have both benign and malignant tumors, the thickness is greater with the malignant tumors than with the benign
