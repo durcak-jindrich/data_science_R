@@ -7,3 +7,5 @@ literate programming - The idea in literate programming is that the documentatio
 factors
 -It is not strictly necessary to specify the levels in the factor() call, but I prefer always to do so explicitly. If there is an unexpected string in the input to factor(), it would end up being one of the levels, and I wouldn’t know about it until much later. Specifying the levels explicitly alleviates that problem.
 
+group_by (dplyr)
+-grouping shouldn't be applied on real numbers - use only integers, factors and other discrete attributes
