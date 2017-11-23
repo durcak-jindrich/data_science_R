@@ -7,5 +7,36 @@ literate programming - The idea in literate programming is that the documentatio
 factors
 -It is not strictly necessary to specify the levels in the factor() call, but I prefer always to do so explicitly. If there is an unexpected string in the input to factor(), it would end up being one of the levels, and I wouldn’t know about it until much later. Specifying the levels explicitly alleviates that problem.
 
-group_by (dplyr)
--grouping shouldn't be applied on real numbers - use only integers, factors and other discrete attributes
+magrittr
+- lhs %>% rhs: Pipe an object forward into a function or call expression
+- lhs %<>% rhs: Pipe an object forward into a function or call expression and update the lhs object with the resulting value
+- lhs %T>% rhs: Pipe a value forward into a function- or call expression and return the original value instead of the result. This is useful when an expression is used for its side-effect, say plotting or printing.
+- lhs %$% rhs: Expose the names in lhs to the rhs expression. This is useful when functions do not have a built-in data argument.
+
+dplyr funcitons
+tbl_df() - info about dataframe
+select() - select columns to work with
+mutate() - add new column with new values to data frame
+transmute() - add new column with new values and get rid of the rest
+arrange() - reorder data by sorting columns
+filter() - pick selected rows and get rid off rest
+group_by() - split data into subtables based on column values
+- grouping shouldn't be applied on real numbers - use only integers, factors and other discrete attributes
+summarize()\summarize() - calculate summary statistics (most powerful with group_by)
+n() - count all the observations in data
+
+plotting
+#this doesn't work: cars %>% plot(speed, dist, data = .)
+Despite giving plot() the data frame, it will not recognize the variables for the x and y parameters, and so adding plots to pipelines requires that you use the %$% operator to give plot() access to the variables in a data frame
+#this works: cars %$% plot(speed, dist, main = "Cars data", xlab = "Speed", ylab = "Stopping distance")
+with %>%: cars %>% plot(dist ~ speed, data = .) #a formula needs to be specified
+- plot() is a generic function - it has different functionality depending on the given parameters
+
+ggplot2
+- gives a domain specific language for creating plots
+- functions from this library rather manipulate a plot by either modifying it or by adding layers
+- qplot() prints the outermost level of program. If you create a plot inside a function, however, it isn’t automatically printed, and you do need to do this explicitly
+- the typical pattern for using ggplot2 is to build such a ggplot object, do various operations on it to modify it, and then finally plot it by printing it.
+- facets (=sublots) are created by 2 functions - facet_grid() and facet_wrap()
+- when facets are being used, the gather function needs to be typically used
+- The geometries tell ggplot2 how you want your data mapped to visual components, like points or densities, and scales tell ggplot2 how dimensions should be visualized.
