@@ -1,3 +1,7 @@
+R can be very wasteful of RAM (You can examine memory usage and memory changes using the pryr package)
+In R, all objects are immutable, so whenever you modify an object, you are actually creating a new object
+
+
 literate programming - The idea in literate programming is that the documentation of a program—in the sense of the documentation of how the program works and how algorithms and data structures in the program works—is written together with the code implementing the program
 - R Markdown (for writing these documents) and knitr (for running the analysis and generating the reports)
 - knitr takes the markdown document, translates it into HTML file and opens it (the HTML file is saved)
@@ -40,3 +44,23 @@ ggplot2
 - facets (=sublots) are created by 2 functions - facet_grid() and facet_wrap()
 - when facets are being used, the gather function needs to be typically used
 - The geometries tell ggplot2 how you want your data mapped to visual components, like points or densities, and scales tell ggplot2 how dimensions should be visualized.
+- most common functions:
+	- qplot() - just for simple plotting
+	- ggplot(data) - creates an object that will be plotted at the end
+	- geom_point(aes(x = x_data, y = y_data, fill = , color = )) - scatter
+	- geom_histogram(aes(x = x_data), bins = 10) - histogram
+	- geom_smooth(method = "lm") - linear fitting and line plotting
+	- geom_line(aes(x = x_data, y = y_data))
+	- facet_grid(key ~ .) 
+		- usually used with gather: longley %>% gather(key, value, Unemployed, Armed.Forces) %>% ... + facet_grid(key ~ .)
+			· (key ~ .) will make rows of subplots
+			· (. ~ key) will make columns of subplots
+		- facet_grid(Measurement ~ ., scale = "free_y") - y axis is independent on each subplot
+		- facet_grid(key ~ ., labeller = labeller(key = c(variable_name_a = "label_name_1")))
+	- geom_boxplot(aes(x = x_data, y = y_data)) - box plot
+	- scale_x_continuous("Speed", breaks = 20:50) - name of axes and ticks on the axis
+	-  scale_x_discrete(labels  = c("setosa" = "Setosa", "versicolor" = "Versicolor", "virginica" = "Virginica"))
+	- ggtitle("Axis labels") + theme(plot.title = element_text(hjust = 0.5)) + #center the label
+	- scale_fill_manual(values = c("red", "green", "blue")) - used for boxplots
+	- scale_fill_brewer(palette = "Greens") - predefined palette of colors
+- typical usecase: cars %>% ggplot(aes(x = speed, y = dist)) + geom_point()

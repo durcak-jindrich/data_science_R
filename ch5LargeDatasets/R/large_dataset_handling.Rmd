@@ -1,0 +1,112 @@
+---
+title: "'Big Data'"
+author: "Jindra"
+date: "11/24/2017"
+output: html_document
+---
+# Dealing with large datasets
+For the analysis of large datasets, we can usually start with a subsample of data and only then analyze all the data
+
+### Subsampling
+```{r subsampling}
+suppressMessages(library(dplyr, quietly = TRUE)) #suppresses messages even in knitted documents
+#library(dplyr, quietly = TRUE) #suppresses message only in console
+data("iris")
+iris %>% sample_n(size = 5) #take 5 random samples (rows)
+iris %>% sample_frac(size = 0.02) #take 2% of dataset
+```
+
+### Examine memory usage
+```{r memory_usage}
+#install.packages("pryr")
+library(pryr)
+#what is the cost of creating a new vector
+mem_change(x <- rnorm(10000))
+mem_change(x[1] <- 0) #this is cheap
+mem_change(y <- x) #this is still cheap - both variables refer to the same object
+mem_change(x[2] <- 0) #this is "expensive" - a copy of object has to be created
+rm(x,y)
+```
+
+This is another reason, besides polluting the namespace, for using pipelines rather than assigning to many variables during an analysis. You are fine if you assign back to a variable, though, so the %<>% operator does not lead to a lot of copying
+
+### Problems with plotting
+There are two problems when making scatterplots with a lot of data. The first is that if you create files from scatterplots, you will create a plot that contains every single individual point. The second issue is that with too many points, a scatterplot is just not informative any longer. Points will overlap, and you cannot see how many individual data points fall on the plot. This usually becomes a problem long before the computational time becomes an issue
+```{r}
+library(ggplot2)
+d <-data.frame(x = rnorm(10000), y = rnorm(10000))
+d %>% ggplot(aes(x = x, y = y)) + geom_point()
+
+#If the points are overlapping because the actually have the same x- or y-coordinates, you can jitter them
+d %>% ggplot(aes(x = x, y = y)) + geom_jitter()
+
+#Another solution to the same problem is plotting the points with alpha levels so each point is partly transparent
+d %>% ggplot(aes(x = x, y = y)) + geom_point(alpha = 0.2)
+
+#A scatterplot with transparency is just a way of showing the 2D density, though, and you can do that directly using the geom_density_2d() function
+d %>% ggplot(aes(x = x, y = y)) + geom_density_2d()
+
+#An alternative way of showing a 2D density is using a so-called hex-plot. This is the 2D equivalent of a histogram. The 2D plane is split into hexagonal bins, and the plot shows the count of points falling into each bin
+d %>% ggplot(aes(x = x, y = y)) + geom_hex()
+
+#combine hex and density
+d %>% ggplot(aes(x=x, y=y)) +
+  geom_hex() +
+  scale_fill_gradient(low = "lightgray", high = "red") +
+  geom_density_2d(color = "black")
+```
+
+### Computation obstacles
+When linear time algorithms are necessary to get results, special packages might be used. One package that both provides a memory efficient linear model fitting (it avoids creating a model matrix that would have rows for each data point and solving equations for that) and functionality for updating the model in batches is the biglm package.
+The data can also be split into more parts. Some packages can split automatically, some need to be split manually. We can create a linear model from the first slice and then update using the slices of data.
+(Note the difference between variable slice and function slice() from dplyr)
+```{r}
+#install.packages("biglm")
+library(biglm)
+data(cars)
+slice_size <- 10
+n <- nrow(cars)
+slice <- cars %>% slice(1:slice_size)
+model <- biglm(dist ~ speed, data = slice)
+for(i in 1: (n/slice_size - 1)){
+  slice <- cars %>% slice((i*slice_size + 1):((i+1)*slice_size))
+  model <- update(model, moredata = slice)
+}
+model
+```
+
+### Too large to load
+R wants to keep the data it works on in memory. So if your computer doesn’t have the RAM to hold it, you are out of luck. At least if you work with the default data representations like data.frames. R usually also wants to use 32-bit integers for indices, and since it uses both positive and negative numbers for indices, you are limited to indexing around 2 billion data points. Even if you can hold more in memory.
+There are different packages for dealing with this. One such is the ff package. It uses memory mapped files to represent the data and load data chunks into memory as needed.
+```{r}
+#install.packages("ff")
+library(ff)
+#It represents data frames as objects of the class ffdf. These behave just like data frames if you use them as such and you can translate a data frame into an ffdf object using the as.ffdf() function.
+ffcars <- as.ffdf(cars)
+summary(ffcars)
+```
+
+### Analysis in batches
+```{r}
+#install.packages("ffbase")
+library(ffbase)
+data(cars)
+model <- bigglm(dist ~ speed, data = ffcars)
+summary(model)
+```
+
+### LiteSQL
+With dplyr you can access commonly used database systems such as MySQL or PostgreSQL. These systems require that you set up a server for the data, though, so a simpler solution, if your data is not already stored in a database, is to use LiteSQL.
+LiteSQL works just on your filesystem but provides a file format and ways of accessing it using SQL. You can open or create a LiteSQL file using the src_sqlite() function from the dplyr package.
+```{r}
+#iris_db <- src_sqlite("iris_db.sqlite3", create = TRUE)
+#load a dataset
+#iris_sqlite <- copy_to(iris_db, iris, temporary = FALSE)
+
+#once loaded, it can be accessed using tbl()
+#iris_sqlite <- tbl(iris_db, "iris")
+
+#Then you can use dplyr functions to make a query to it
+#iris_sqlite %>% group_by(Species) %>% summarise(mean.Petal.Length = mean(Petal.Length))
+```
+
