@@ -1,6 +1,12 @@
 R can be very wasteful of RAM (You can examine memory usage and memory changes using the pryr package)
 In R, all objects are immutable, so whenever you modify an object, you are actually creating a new object
-
+Three dots, e.g. print(x, ...). In technical language, this is called an ellipsis. And it means that the function is designed to take any number of named or unnamed arguments.
+How do you write functions that make use of ellipsis? You simply convert the … to a list, like so:
+HelloWorld <- function(...) {
+  arguments <- list(...)
+  paste(arguments)
+}
+HelloWorld("Hello", "World", "!")
 
 literate programming - The idea in literate programming is that the documentation of a program—in the sense of the documentation of how the program works and how algorithms and data structures in the program works—is written together with the code implementing the program
 - R Markdown (for writing these documents) and knitr (for running the analysis and generating the reports)
@@ -14,7 +20,7 @@ factors
 magrittr
 - lhs %>% rhs: Pipe an object forward into a function or call expression
 - lhs %<>% rhs: Pipe an object forward into a function or call expression and update the lhs object with the resulting value
-- lhs %T>% rhs: Pipe a value forward into a function- or call expression and return the original value instead of the result. This is useful when an expression is used for its side-effect, say plotting or printing.
+- lhs %T>% rhs: Pipe a value forward into a function or call expression and return the original value instead of the result. This is useful when an expression is used for its side-effect, say plotting or printing.
 - lhs %$% rhs: Expose the names in lhs to the rhs expression. This is useful when functions do not have a built-in data argument.
 
 dplyr funcitons
@@ -40,7 +46,7 @@ ggplot2
 - gives a domain specific language for creating plots
 - functions from this library rather manipulate a plot by either modifying it or by adding layers
 - qplot() prints the outermost level of program. If you create a plot inside a function, however, it isn’t automatically printed, and you do need to do this explicitly
-- the typical pattern for using ggplot2 is to build such a ggplot object, do various operations on it to modify it, and then finally plot it by printing it.
+- the typical pattern for using ggplot2 is to build such a ggplot object, do various operations on it to modify it, and then finally plot it by printing it
 - facets (=sublots) are created by 2 functions - facet_grid() and facet_wrap()
 - when facets are being used, the gather function needs to be typically used
 - The geometries tell ggplot2 how you want your data mapped to visual components, like points or densities, and scales tell ggplot2 how dimensions should be visualized.
@@ -59,7 +65,7 @@ ggplot2
 		- facet_grid(key ~ ., labeller = labeller(key = c(variable_name_a = "label_name_1")))
 	- geom_boxplot(aes(x = x_data, y = y_data)) - box plot
 	- scale_x_continuous("Speed", breaks = 20:50) - name of axes and ticks on the axis
-	-  scale_x_discrete(labels  = c("setosa" = "Setosa", "versicolor" = "Versicolor", "virginica" = "Virginica"))
+	- scale_x_discrete(labels  = c("setosa" = "Setosa", "versicolor" = "Versicolor", "virginica" = "Virginica"))
 	- ggtitle("Axis labels") + theme(plot.title = element_text(hjust = 0.5)) + #center the label
 	- scale_fill_manual(values = c("red", "green", "blue")) - used for boxplots
 	- scale_fill_brewer(palette = "Greens") - predefined palette of colors

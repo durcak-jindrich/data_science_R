@@ -1,0 +1,9 @@
+Supervised learning is used when you have variables you want to predict using other variables
+
+For the simplest case of supervised learning, we have one response variable, y, and one input variable, x, and we want to figure out a function, f, mapping input to output, i.e., so that y = f(x). What we have to work with is example data of matching x and y. We can write that as vectors x = (x_1,…,x_n) and y = (y_1,…,y_n) where we want to figure out a function f such that y_i = f(x_i)
+
+There are two types of supervised learning: regression and classification. Regression is used when the output variable we try to target is a number. Classification is used when we try to target categorical variables.
+
+When we fit our function to data to learn about the parameters, we say we are doing inference, and we are inferring the parameters.
+
+The general pattern for specifying models in R is using what is called “formulas”. The simplest form is y ∼ x, which we should interpret as saying y = f (x)
