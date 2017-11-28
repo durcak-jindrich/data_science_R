@@ -7,3 +7,6 @@ There are two types of supervised learning: regression and classification. Regre
 When we fit our function to data to learn about the parameters, we say we are doing inference, and we are inferring the parameters.
 
 The general pattern for specifying models in R is using what is called “formulas”. The simplest form is y ∼ x, which we should interpret as saying y = f (x)
+
+Overfitting
+- the polynomial fits slightly better than linear fit, which it should based on theory, but there is a bit of a cheat here. We are looking at how the models work on the data we used to fit them (training data only). The more complex model will always be better at this. That is the problem we are dealing with. The more complex model might be overfitting the data and capturing the statistical noise we don’t want it to capture. The solution is to randomly divide the data into training and test sets. Once we have figured out what the best model is we will still want to train it on all the data we have

@@ -1,0 +1,41 @@
+---
+title: "Polynomial fit"
+author: "Jindra"
+date: "11/27/2017"
+output: html_document
+---
+### Setup
+```{r setup}
+library(mlbench)
+library(ggplot2)
+library(dplyr)
+data("BreastCancer")
+data("cars")
+```
+
+If d denotes breaking distance and s the speed, then we want to fit d = θ_0 + θ_1 s + θ_2 s^2 + … + θ_n s^n 
+We’ll just do n = 2 so we want to fit a second-degree polynomial. Don’t be confused about the higher degrees of the polynomial, it is still a linear model. The linear in linear model refers to the θ parameters, not the data.
+```{r polynomial_fit}
+#Now this doesn’t quite work, and the reason is that multiplication is interpreted as interaction terms even if it is interaction with the parameter itself
+#cars %>%
+#  model.matrix(dist ~ speed + speed^2, data=.) %>%
+#  head
+
+#This has to be done: To avoid that problem we need to tell R that the speed^2 term should be interpreted just the way it is. We do that using the identity function, I():
+cars %>%
+  model.matrix(dist ~ speed + I(speed^2), data = .) %>%
+  head
+
+#plot it
+cars %>%
+  ggplot(aes(x = speed, y = dist)) +
+  geom_point() +
+  geom_smooth(method = "lm",
+              formula = y ~ x + I(x^2))
+
+#We can fit the polynomial using the linear model function like this:
+cars %>%
+  lm(dist ~ speed + I(speed^2), data = .) %>%
+  summary
+```
+

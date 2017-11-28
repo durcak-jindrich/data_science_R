@@ -1,0 +1,107 @@
+---
+title: "Binary classification"
+author: "Jindra"
+date: "11/27/2017"
+output: html_document
+---
+
+### Setup
+```{r setup}
+library(mlbench)
+library(ggplot2)
+library(dplyr)
+data("BreastCancer")
+```
+
+### Binary classification (logistic regression)
+```{r binary_classification}
+BreastCancer %>% head
+BreastCancer %>% ggplot(aes(x = Cl.thickness, y = Class)) +
+  geom_jitter(height = 0.05, width = 0.3, alpha = 0.4)
+```
+
+For classification, glm() function is used - binomial family. We cannot directly fit the breast cancer data with logistic regression, though. There are two problems. The first is that the breast cancer dataset considers the clump thickness ordered factors, but for logistic regression we need the input variable to be numeric. While generally, it is not advisable to directly translate categorical data into numeric data, judging from the plot it seems okay in this case.
+safer approach of first translating the factor into strings and then into numbers. The second problem is that the glm() function expects the response variable to be numerical, coding the classes like 0 or 1, while the BreastCancer data encodes the classes as a factor.
+We can translate the input variable to numerical values and the response variable to 0 and 1
+```{r binary_classification_2}
+BreastCancer %>%
+  mutate(Cl.thickness.numeric = as.numeric(as.character(Cl.thickness))) %>%
+  mutate(IsMalignant = ifelse(Class == "benign",0 ,1)) %>%
+  ggplot(aes(x = Cl.thickness.numeric, y = IsMalignant)) +
+  geom_jitter(height = 0.05, width = 0.3, alpha = 0.4) +
+  geom_smooth(method = "glm",
+              method.args = list(family = "binomial"))
+
+#To actually get the fitted object
+BreastCancer %>% 
+  mutate(Cl.thickness.numeric = as.numeric(as.character(Cl.thickness))) %>%
+  mutate(IsMalignant = ifelse(Class == "benign",0 ,1)) %>%
+  glm(IsMalignant ~ Cl.thickness.numeric,
+      family = "binomial",
+      data = .)
+```
+
+### Model matrices and formulas
+When we fit a line for single x and y values we are actually also working with fitting a vector because we have both the x values and the intercept to fit. That is why the model has two parameters, θ 0 and θ 0. For each x value, we are actually using the vector (1, x) where the 1 is used to fit the intercept.
+```{r matricses_formulas}
+cars %>%
+  model.matrix(dist ~ speed, data = .) %>%
+  head(5)
+#remove the intercept
+cars %>% 
+  model.matrix(dist ~ speed - 1, data = .) %>%
+  head(5)
+```
+
+If you want to fit more than one parameter, no problem. You just give write y ∼ x + z and the model matrix will have 3 columns. So if we wanted to fit the breast cancer data to both cell thickness and cell size, we can do that just by adding both explanatory variables in the formula
+```{r more_parameters}
+BreastCancer %>%
+  mutate(Cl.thickness.numeric = as.numeric(as.character(Cl.thickness)),
+         Cell.size.numeric = as.numeric(as.character(Cell.size))) %>%
+  mutate(IsMalignant = ifelse(Class == "benign", 0, 1)) %>%
+  model.matrix(IsMalignant ~ Cl.thickness.numeric + Cell.size.numeric,
+               data = .) %>%
+  head(5)
+
+#generalized linear model
+BreastCancer %>%
+  mutate(Cl.thickness.numeric = as.numeric(as.character(Cl.thickness)),
+         Cell.size.numeric = as.numeric(as.character(Cell.size))) %>%
+  mutate(IsMalignant = ifelse(Class == "benign", 0, 1)) %>%
+  glm(IsMalignant ~ Cl.thickness.numeric + Cell.size.numeric,
+      family = "binomial",
+      data = .)
+```
+
+Translating data into model matrices also works for factors, they are just represented as a binary vector for each level
+```{r factor_parameters}
+BreastCancer %>%
+  mutate(IsMalignant = ifelse(Class == "benign", 0, 1)) %>%
+  model.matrix(IsMalignant ~ Bare.nuclei, data = .) %>%
+  head(5)
+
+#The translation for ordered factors gets a little more complicated, but R will happily do it for you
+BreastCancer %>%
+  mutate(IsMalignant = ifelse(Class == "benign", 0, 1)) %>%
+  model.matrix(IsMalignant ~ Cl.thickness, data = .) %>%
+  head(5)
+```
+
+If you want to include interactions between your parameters, you specify that using * instead of +. How interactions are modeled depends a little bit on whether your parameters are factors or numeric but for numeric values, the model matrix will just contain a new column with the two values multiplied.
+```{r include_interactions}
+BreastCancer %>%
+  mutate(Cl.thickness.numeric = as.numeric(as.character(Cl.thickness)),
+         Cell.size.numeric = as.numeric(as.character(Cell.size))) %>%
+  mutate(IsMalignant = ifelse(Class == "benign", 0, 1)) %>%
+  model.matrix(IsMalignant ~ Cl.thickness.numeric * Cell.size.numeric,
+               data = .) %>%
+  head(5)
+
+BreastCancer %>%
+  mutate(Cl.thickness.numeric =
+           as.numeric(as.character(Cl.thickness))) %>%
+  mutate(IsMalignant = ifelse(Class == "benign", 0, 1)) %>%
+  model.matrix(IsMalignant ~ Cl.thickness.numeric * Bare.nuclei, data = .) %>%
+  head(3)
+```
+

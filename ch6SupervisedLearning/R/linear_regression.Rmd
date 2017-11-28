@@ -95,10 +95,3 @@ cars %>% ggplot(aes(x = speed, y = dist)) +
 
 ```
 
-### Binary classification
-```{r binary_classification}
-library(mlbench)
-data("BreastCancer")
-BreastCancer %>% head
-```
-

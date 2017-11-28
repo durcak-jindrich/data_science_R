@@ -1,0 +1,121 @@
+---
+title: "Validation Models"
+author: "Jindra"
+date: "11/27/2017"
+output: html_document
+---
+
+### Setup
+```{r setup}
+library(mlbench)
+library(ggplot2)
+library(dplyr)
+data("BreastCancer")
+data("cars")
+```
+
+### Model validation
+The problem with that idea of using the more complex model is that while the most complex model will always fit the training data better, it will not necessarily generalize better. If we use a high enough degree polynomial—if I have a degree that is the same as the number of data points—I can fit the data perfectly.
+What I really need to know is whether one or the other model is better at predicting the distance from the speed. We can fit the two models and get their predictions using the predict() function
+```{r model_validation}
+line <- cars %>% lm(dist ~ speed, data =.)
+poly <- cars %>% lm(dist ~ speed + I(speed^2), data = .)
+
+predict(line, cars) %>% head
+predict(poly, cars) %>% head
+```
+To compare the two models, we need a measure of how well they fit. Since both models are fitting the squared distances from predictions to targets, a fair measure would be looking at the mean squared error.
+The unit of that would be distance squared, though, so we usually use the square root of this mean distance to measure the quality of the predictions, which would give us the errors in the distance unit.
+```{r error_models}
+rmse <- function(x,t) sqrt(mean(sum((t - x)**2)))
+line_error = rmse(predict(line,cars), cars$dist)
+poly_error = rmse(predict(poly,cars), cars$dist)
+
+```
+
+### Splitting data into training and testing sets
+```{r data_split}
+training_data = cars[1:25,]
+testing_data = cars[26:50,]
+
+line <- training_data %>% lm(dist ~ speed, data = .)
+poly <- training_data %>% lm(dist ~ speed + I(speed^2), data = .)
+
+rmse(predict(line,testing_data),testing_data$dist)
+rmse(predict(poly,testing_data),testing_data$dist)
+```
+The second-degree polynomial is still better, but I am also still cheating. There is more structure in my dataset than just the speed and distances. The data frame is sorted according to the distance so the training set has all the short distances and the test data all the long distances. The are not similar. That is not good.
+So when you split your data into training and test data, you will want to sample data points randomly.
+```{r random_sampling}
+sampled_cars <- cars %>% 
+  mutate(training = sample(0:1, nrow(cars), replace = TRUE))
+
+training_data = sampled_cars %>% filter(training == 1)
+testing_data = sampled_cars %>% filter(training == 0)
+
+training_data %>% head
+testing_data %>% head
+
+line <- training_data %>% lm(dist ~ speed, data = .)
+poly <- training_data %>% lm(dist ~ speed + I(speed^2), data = .)
+
+rmse(predict(line,testing_data),testing_data$dist)
+rmse(predict(poly,testing_data),testing_data$dist)
+
+#plot the models
+training_data %>%
+  ggplot(aes(x = speed, y = dist)) +
+  geom_point() +
+  ggtitle("Comparison of models - random sampling") +
+  geom_smooth(method = "lm",
+              formula = y ~ x,
+              aes(colour = "Linear"),
+              se=FALSE) +
+  geom_smooth(method = "lm",
+              formula = y ~ x + I(x^2),
+              aes(colour = "Polynomial"),
+              se=FALSE) +
+  scale_colour_manual(name="Method", values=c("red", "blue")) +
+  xlab("Speed") +
+  ylab("Stopping distance") +
+  geom_point(data = cars)
+```
+
+### Validation of classification model
+If you want to do classification rather than regression, then the root mean square error is not the function to use to evaluate your model. With classification, you want to know how many data points are classified correctly and how many are not.
+```{r}
+formatted_data = BreastCancer %>%
+  mutate(Cl.thickness.numeric = as.numeric(as.character(Cl.thickness)),
+         Cell.size.numeric = as.numeric(as.character(Cell.size))) %>%
+  mutate(IsMalignant = ifelse(Class == "benign", 0, 1))
+
+#learn
+fitted_model = formatted_data %>%
+  glm(IsMalignant ~ Cl.thickness.numeric + Cell.size.numeric, data = .)
+
+#predict
+predict(fitted_model,formatted_data, type = "response") %>% head
+classify <- function(probability) ifelse(probability < 0.5, 0, 1)
+classified_malignant = classify(predict(fitted_model, formatted_data))
+
+#confusion matrix - compare the predicted classification against the actual classification 
+table(formatted_data$IsMalignant, classified_malignant)
+```
+The rows count how many zeros and ones we see in the formatted_data$IsMalignant argument and the columns how many zeros and ones we see in the classified_malignant argument
+ROWS = data (1st row = not malignant, 2nd row = malignant)
+COLUMNS = predictions (1st column = not malignant, 2nd column = malignant)
+(The positions, of course, depends on the order of the arguments to table())
+It can be a little hard to remember which dimension, rows or columns, are the predictions but you can provide a parameter, dnn (dimnames names), to make the table remember it for you:
+```{r name_confusion_matrix}
+table(formatted_data$IsMalignant, classified_malignant, dnn = c("Data","Predictions"))
+```
+The correct predictions are on the diagonal, and the off-diagonal values are where our model predicts incorrectly.
+The first row is where the data says that tumors are not malignant. The first element, where the model predicts that the tumor is benign, and the data agrees, is called the true negatives. The element to the right of it, where the model says a tumor is malignant but the data says it is not, is called the false positives.
+
+The classes are "benign" and "malignant" and confusion matrix can have the right names
+```{r name_classes_conf_matrix}
+classify <- function(probability) ifelse(probability < 0.5, "benign", "malignant")
+classified <- classify(predict(fitted_model, formatted_data))
+table(formatted_data$Class, classified, dnn = c("Data","Predictions"))
+```
+
