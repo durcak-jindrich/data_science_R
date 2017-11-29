@@ -1,0 +1,130 @@
+---
+title: "Random permutation of data"
+author: "Jindra"
+date: "11/28/2017"
+output: html_document
+---
+### Setup
+```{r setup}
+library(mlbench)
+library(ggplot2)
+library(Metrics)
+suppressMessages(library(dplyr, quietly = TRUE)) #suppresses messages even in knitted documents
+data("BreastCancer")
+data("cars")
+```
+
+### Use sample() for data shuffling
+```{r sample}
+permuted_cars <- cars[sample(1:nrow(cars)),]
+cars %>% head(3)
+permuted_cars %>% head(3)
+```
+The numbers to the left of the data frame are the original row numbers (it really is the row names, but it is the same in this case).
+
+### Cross-validation
+Splitting the data into two sets, training and testing, is one approach to subsampling, but a general version of this is used in something called cross-validation. Here the idea is to get more than one result out of the random permutation we use. 
+If we use a single training/test split, we only get one estimate of how a model performs on a dataset. Using more gives us an idea about the variance of this. We can split a dataset into n groups like this:
+```{r}
+group_data <- function(df,n){
+  groups <- rep(1:n, each = nrow(df)/n)
+  split(df, groups)
+}
+permute_rows <- function(df) df[sample(1:nrow(df)),]
+#we get something that contains n data structures that each have a data frame of the same form as the cars data
+cars %>% permute_rows %>% group_data(5) %>% head(1)
+grouped_cars <- cars %>% permute_rows %>% group_data(5)
+grouped_cars[[1]] #list indexing
+```
+If you use [] you will also get the data, but the result will be a list with one element, which is not what you want.
+
+### Different groups estimates
+```{r divided_groups}
+estimates <- grouped_cars[[1]] %>%
+    lm(dist ~ speed, data = .) %>%
+    .$coefficients
+for(i in 2:length(grouped_cars)){
+  group_estimates <- grouped_cars[[i]] %>%
+    lm(dist ~ speed, data = .) %>%
+    .$coefficients
+  estimates <- rbind(estimates, group_estimates)
+}
+estimates
+```
+There are several reasons why this isn’t the optimal way of coding this. The row names are ugly, but that is easy to fix. The way we combine the estimates in the data frame is inefficient—although it doesn’t matter much with such a small dataset—and later in the book, we will see why. 
+The main reason, though, is that explicit loops like this make it hard to follow the data transformations since it isn’t a pipeline of processing. The package purrr lets us work on lists using pipelines.
+
+### Purrr package
+```{r purrr}
+library(purrr)
+estimates <- grouped_cars %>%
+  map(. %>% lm(dist ~ speed, data = .) %>% .$coefficients)
+estimates
+
+#the result is a list, but we would like a data frame instead
+estimates <- grouped_cars %>%
+  map(. %>% lm(dist ~ speed, data = .) %>% .$coefficients) %>%
+  do.call("rbind", .)
+estimates
+```
+
+### Cross validation
+A problem with splitting the data into many small groups is that we get a large variance in estimates. Instead of working with each little dataset independently we can remove one of the datasets and work on all the others. This will mean that our estimates are no longer independent, but the variance goes down. The idea of removing a subset of the data and then cycle through the groups evaluating a function for each group that is left out, is called cross-validation.
+If we already have the grouped data frames in a list, we can remove one element from the list using [-i] indexing—just as we can for vectors—and the result is a list containing all the other elements
+```{r cross_validation}
+cross_validation_groups <- function(grouped_df){
+  #It actually creates a list, not a vector. That's how R creates lists.
+  result = vector(mode = "list", length = length(grouped_df))
+  for(i in seq_along(grouped_df)){
+    result[[i]] <- grouped_df[-i] %>% do.call("rbind", .)
+  }
+  result
+}
+
+#Combine everything in a pipeline
+cars %>%
+  permute_rows %>%
+  group_data(5) %>%
+  cross_validation_groups %>%
+  map(. %>% lm(dist ~ speed, data = .) %>% .$coefficients) %>%
+  do.call("rbind",.)
+```
+
+Where cross-validation is typically used is when leaving out a subset of the data for testing and using the rest for training.
+
+We can write a simple function for splitting the data this way, similar to the cross_validation_groups() function. It cannot return a list of data frames but needs to return a list of lists, each list containing a training data frame and a test data frame. It looks like this:
+
+```{r cross_split}
+cross_validation_split <- function(grouped_df){
+  result <- vector(mode = "list", length = length(grouped_df))
+  for(i in seq_along(grouped_df)){
+    training = grouped_df[-i] %>% do.call("rbind", .)
+    test = grouped_df[[i]]
+    result[[i]] = list(training = training, test = test)
+  }
+  result
+}
+
+
+prediction_accuracy_cars <- function(test_and_training) {
+  result <- vector(mode = "numeric",
+                   length = length(test_and_training))
+  for (i in seq_along(test_and_training)) {
+    training <- test_and_training[[i]]$training
+    test <- test_and_training[[i]]$test
+    model <- training %>% lm(dist ~ speed, data = .)
+    predictions <- test %>% predict(model, data = .)
+    targets <- test$dist
+    result[i] <- rmse(targets, predictions)
+  }
+  result
+}
+
+#A pipeline to get the cross-validation accuracy for your different groups:
+cars %>%
+  permute_rows %>%
+  group_data(5) %>%
+  cross_validation_split %>%
+  prediction_accuracy_cars
+```
+

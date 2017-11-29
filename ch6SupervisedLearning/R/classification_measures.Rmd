@@ -1,0 +1,122 @@
+---
+title: "Classification measures"
+author: "Jindra"
+date: "11/27/2017"
+output: html_document
+---
+### Setup and model
+```{r setup}
+library(mlbench)
+library(ggplot2)
+suppressMessages(library(dplyr, quietly = TRUE)) #suppresses messages even in knitted documents
+data("BreastCancer")
+data("cars")
+
+#model
+formatted_data = BreastCancer %>%
+  mutate(Cl.thickness.numeric = as.numeric(as.character(Cl.thickness)),
+         Cell.size.numeric = as.numeric(as.character(Cell.size))) %>%
+  mutate(IsMalignant = ifelse(Class == "benign", 0, 1))
+#learn
+fitted_model = formatted_data %>%
+  glm(IsMalignant ~ Cl.thickness.numeric + Cell.size.numeric, data = .)
+#predict
+predict(fitted_model,formatted_data, type = "response") %>% head
+classify <- function(probability) ifelse(probability < 0.5, 0, 1)
+classified = classify(predict(fitted_model, formatted_data))
+```
+
+###Accuracy
+The simplest measure of how well a classification is doing is the accuracy. It measures how many classes it gets right out of the total, so it is the diagonal values of the confusion matrix divided by the total.
+
+$accuracy = \frac{correctly\ classified}{all} = \frac{TP+TN}{TP+TN+FP+FN}$
+
+The confusion matrix:
+
+$\begin{array}{c|lcr}&  \textbf{Predictions} \\ & \textbf{benign} & \textbf{malignant} \\ \hline \textbf{Reality -  benign} & \textit{TN} & \textit{FP} \\ \textbf{Reality - malignant} & \textit{FN} & \textit{TP}\end{array}$
+```{r accuracy}
+confusion_matrix = table(formatted_data$Class, classified,
+                         dnn = c("Data","Predictions"))
+(accuracy = sum(diag(confusion_matrix))/sum(confusion_matrix))
+```
+
+We have to be careful with accuracy. The data doesn’t have to have the same number of instances for each class. The breast cancer data does not. The breast cancer data has more benign tumors than malignant tumors.
+```{r accuracy_2}
+tbl <- table(BreastCancer$Class)
+tbl["benign"] / sum(tbl)
+#so the guessing benign everytime brings 65.5% accuracy
+#If you actually want to see “random” guessing, you can get an estimate of this by simply permuting the classes in the data. The function sample() can do this
+table(BreastCancer$Class, sample(BreastCancer$Class))
+#perform the guessing 10 times
+accuracy <- function(confusion_matrix){
+  sum(diag(confusion_matrix))/sum(confusion_matrix)
+}
+replicate(10, accuracy(table(BreastCancer$Class,
+                             sample(BreastCancer$Class))))
+```
+
+### Specificity and Sensitivity
+Specificity captures how often the model predicts a negative case correctly. In the breast cancer data, this is how often, when the model predicts a tumor as benign, it actually is ( = true negative rate).
+
+$specificity = \frac{TN}{TN+FP}$
+
+Sensitivity (= recall) does the same thing but for the positives. It captures how well, when the data has the positive class, your model predicts this correctly ( = true positive rate).
+
+$sensitivity = \frac{TP}{TP+FN} = recall$
+
+If your accuracy is 100%, then both of these will also be 100%. So we want the highest possible number for both these measures. But there is usually a trade-off between the two. Using the “best guessing” strategy of always picking the most frequent class will set one of the two to 100% but at the cost of the other. 
+In the breast cancer data the best guess is always benign, the negative case, and always guessing benign will give us a specificity of 100%. Because of this, we are never interested in optimizing either measure alone. We want to optimize both.
+```{r specificity_sensitivity}
+(specificity <- confusion_matrix[1,1] /
+               (confusion_matrix[1,1] + confusion_matrix[1,2]))
+(sensitivity <- confusion_matrix[2,2] /
+               (confusion_matrix[2,1] + confusion_matrix[2,2]))
+
+#compare to random permutation
+specificity <- function(confusion_matrix){
+  confusion_matrix[1,1] / (confusion_matrix[1,1] + confusion_matrix[1,2])
+}
+sensitivity <- function(confusion_matrix){
+  confusion_matrix[2,2] / (confusion_matrix[2,1] + confusion_matrix[2,2])
+}
+prediction_summary <- function(confusion_matrix){
+  c("accuracy" = accuracy(confusion_matrix),
+    "specificity" = specificity(confusion_matrix),
+    "sensitivity" = sensitivity(confusion_matrix))
+}
+random_prediction_summary <- function(){
+  prediction_summary(table(BreastCancer$Class, 
+                           sample(BreastCancer$Class)))
+}
+replicate(3, random_prediction_summary())
+```
+
+### Other measures
+False omission rate, which is the false negatives divided by all the predicted negatives:
+```{r}
+confusion_matrix[2,1] / sum(confusion_matrix[,1])
+```
+
+The negative predictive value is instead the true negatives divided by the predicted negatives:
+```{r}
+confusion_matrix[1,1] / sum(confusion_matrix[,1])
+```
+These two will always sum to one so we are really only interested in one of them
+
+For the predicted positives we have the positive predictive values and false discovery rate:
+```{r}
+confusion_matrix[2,2] / sum(confusion_matrix[,2])
+confusion_matrix[1,2] / sum(confusion_matrix[,2])
+```
+The false discovery rate, usually abbreviated FDR, is the one most frequently used. It is closely related to the threshold used on p-values (the significance thresholds) in classical hypothesis testing.
+Remember that if you have a 5% significance threshold in classical hypothesis testing, it means that when the null hypothesis is true, you will predict it is false 5% of the time. This means that your false discovery rate is 5%.
+
+### Precision
+The true positives divided by the number of predicted positives. In other words, of all patients we predicted cancer, what fraction actually has cancer?
+
+$precision = \frac{TP}{TP+FP}$
+```{r precision}
+(precision <- confusion_matrix[2,2] /
+             (confusion_matrix[2,2] + confusion_matrix[1,2]))
+```
+
