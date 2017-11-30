@@ -1,0 +1,77 @@
+---
+title: "Principal component analysis"
+author: "Jindra"
+date: "11/30/2017"
+output: html_document
+---
+
+### Principal component analysis in R
+```{r}
+suppressMessages(library(dplyr))
+library(magrittr)
+library(ggplot2)
+#use the iris dataset. It is not high-dimensional, but it will do as a first example
+iris %>% head
+iris %>%
+  ggplot(aes(x = Sepal.Length, y = Sepal.Width, col = Species)) +
+  geom_point()
+iris %>%
+  ggplot(aes(x = Petal.Length, y = Petal.Width, colour = Species)) +
+  geom_point()
+```
+
+Since PCA only works on numerical data, we need to remove the Species parameter, but after that, we can do the transformation using the prcomp function:
+```{r pca}
+pca <- iris %>% select(-Species) %>% prcomp
+pca
+```
+
+The object that this produces contains different information about the result. The standard deviations tell us how much variance is in each component and the rotation what the linear transformation is. If we plot the pca object, we will see how much of the variance in the data is on each component.
+If the first few components do not contain most of the variance, the transformation has done little for you.
+```{r pca_variance_plot}
+plot(pca)
+
+#To map the data to the new space spanned by the principal components, we use the predict() function:
+mapped_iris <- pca %>% predict(iris)
+mapped_iris %>% head
+
+#plot first two components
+mapped_iris %>%
+  as.data.frame %>% #original data is in "matrix" (only data frame works with ggplot)
+  cbind(Species = iris$Species) %>%
+  ggplot(aes(x = PC1, y = PC2, col = Species)) +
+  geom_point()
+```
+We didn’t gain much from this. There was about as much information in the original columns as there is in the transformed data
+
+### House Votes data
+The data contains the votes cast for both republicans and democrats on 16 different proposals.
+```{r more_dimensions_pca}
+library(mlbench)
+data("HouseVotes84")
+HouseVotes84 %>% head
+
+#we can try pca on the data to find if democrats and republicans vote differently
+names(HouseVotes84)
+
+#DATA NEEDS TO BE NUMERIC FOR PCA, DOESN'T WORK WITH FACTORS
+#HouseVotes84 %>% select(-Class) %>% prcomp #ERROR
+
+#map the votes into zeros and ones
+#We can use the function apply(). This function is used to apply a function to a matrix
+#assume that missing value means that both answers get the same vote = 0.5
+vote_patterns <- HouseVotes84 %>%
+  select(-Class) %>%
+  apply(c(1,2), . %>% {ifelse(as.character(.) == "n", 0, 1)}) %>%
+  apply(c(1,2), . %>% {ifelse(is.na(.), 0.5, .)})
+
+pca <- vote_patterns %>% prcomp
+
+mapped_votes <- pca %>% predict(vote_patterns)
+mapped_votes %>% 
+  as.data.frame %>%
+  cbind(Class = HouseVotes84$Class) %>%
+  ggplot(aes(x = PC1, y = PC2, colour = Class)) +
+  geom_point()
+```
+

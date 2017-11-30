@@ -1,0 +1,6 @@
+Unsupervised learning concerns finding unknown structures in data.
+
+Dimensionality reduction , as the name hints at, are methods used when you have high-dimensional data and want to map it down into fewer dimensions. The purpose here is usually to visualize data to try and spot patterns from plots. It possibly removes some information, but by reducing the number of dimensions it can be easier to analyze.
+
+Principal component analysis (PCA) maps your data from one vector space to another of the same dimensionality as the first. So it doesn’t reduce the number of dimensions as such. However, it chooses the coordinate system of the new space such that the most information is in the first coordinate, the second most information in the second coordinate, and so on. After the transformation there is exactly the same amount of information in your data, it is just represented along different dimensions.
+Because the PCA just transforms your data, your data has to be numerical vectors, to begin with. For categorical data, you will need to modify the data first
