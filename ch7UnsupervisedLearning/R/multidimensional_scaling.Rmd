@@ -1,0 +1,25 @@
+---
+title: "Multidimensional scaling"
+author: "Jindra"
+date: "11/30/2017"
+output: html_document
+---
+
+Sometimes it is easier to have a measure of distance between objects than representing them as numerical vectors. Consider for example strings. You could translate them into numbers based on their encoding, but the space of possible strings is vast—infinite if you do not restrict their length—so it is not a practical approach. However, there are many measures of how different two strings are.
+For strings, at least, it is easier to define a distance measure than a mapping into numeric values. When what we have is a distance measure we can represent our data as a distance matrix. Multidimensional scaling takes such a matrix of all pair-wise distances and maps each data point into a linear space while preserving the pair-wise distances as well as possible.
+Consider the iris dataset again. For this dataset, of course, we do have the data points represented as numerical vectors, but it is a dataset we are familiar with so it is good to see the new method in use on it.
+```{r distance_matrix}
+suppressMessages(library(dplyr))
+library(ggplot2)
+#Consider the iris dataset again. For this dataset, of course, we do have the data points represented as numerical vectors, but it is a dataset we are familiar with so it is good to see the new method in use on it.
+iris_dist <- iris %>% select(-Species) %>% dist
+mds_iris <- iris_dist %>% cmdscale(k = 2) #k specifies the dimensionality
+mds_iris %>% head
+
+mds_iris %>%
+  as.data.frame %>%
+  cbind(Species = iris$Species) %>%
+  ggplot(aes(x = V1, y = V2, colour = Species)) +
+  geom_point()
+```
+
