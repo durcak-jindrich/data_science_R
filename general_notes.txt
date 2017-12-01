@@ -1,12 +1,16 @@
-R can be very wasteful of RAM (You can examine memory usage and memory changes using the pryr package)
+-R can be very wasteful of RAM (You can examine memory usage and memory changes using the pryr package)
 In R, all objects are immutable, so whenever you modify an object, you are actually creating a new object
-Three dots, e.g. print(x, ...). In technical language, this is called an ellipsis. And it means that the function is designed to take any number of named or unnamed arguments.
+-Three dots, e.g. print(x, ...). In technical language, this is called an ellipsis. And it means that the function is designed to take any number of named or unnamed arguments.
 How do you write functions that make use of ellipsis? You simply convert the … to a list, like so:
 HelloWorld <- function(...) {
   arguments <- list(...)
   paste(arguments)
 }
 HelloWorld("Hello", "World", "!")
+
+-When you do want to insert a <br /> break tag using Markdown, you end a line with two or more spaces, then type return.
+You can also use the <br> tag
+-When you need to use the same random numbers across several part of Rmarkdown, r chunk can be cached
 
 literate programming - The idea in literate programming is that the documentation of a program—in the sense of the documentation of how the program works and how algorithms and data structures in the program works—is written together with the code implementing the program
 - R Markdown (for writing these documents) and knitr (for running the analysis and generating the reports)

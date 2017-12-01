@@ -4,3 +4,5 @@ Dimensionality reduction , as the name hints at, are methods used when you have 
 
 Principal component analysis (PCA) maps your data from one vector space to another of the same dimensionality as the first. So it doesn’t reduce the number of dimensions as such. However, it chooses the coordinate system of the new space such that the most information is in the first coordinate, the second most information in the second coordinate, and so on. After the transformation there is exactly the same amount of information in your data, it is just represented along different dimensions.
 Because the PCA just transforms your data, your data has to be numerical vectors, to begin with. For categorical data, you will need to modify the data first
+
+Clustering methods seek to find similarities between data points and group data according to these similarities. Such clusters can either have a hierarchical structure or not; when the structure is hierarchical, each data point will be associated with several clusters, ordered from the more specific to the more general, and when the structure is not hierarchical any data point is typically only assigned a single cluster (k-means).

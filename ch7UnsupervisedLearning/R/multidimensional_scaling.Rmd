@@ -4,9 +4,21 @@ author: "Jindra"
 date: "11/30/2017"
 output: html_document
 ---
+### Setup
+```{r setup}
+suppressMessages(library(dplyr))
+library(ggplot2)
+library(mlbench)
+data("HouseVotes84")
+vote_patterns <- HouseVotes84 %>%
+  select(-Class) %>%
+  apply(c(1,2), . %>% {ifelse(as.character(.) == "n", 0, 1)}) %>%
+  apply(c(1,2), . %>% {ifelse(is.na(.), 0.5, .)})
+```
 
-Sometimes it is easier to have a measure of distance between objects than representing them as numerical vectors. Consider for example strings. You could translate them into numbers based on their encoding, but the space of possible strings is vast—infinite if you do not restrict their length—so it is not a practical approach. However, there are many measures of how different two strings are.
-For strings, at least, it is easier to define a distance measure than a mapping into numeric values. When what we have is a distance measure we can represent our data as a distance matrix. Multidimensional scaling takes such a matrix of all pair-wise distances and maps each data point into a linear space while preserving the pair-wise distances as well as possible.
+### Multidimensional scaling
+Sometimes it is easier to have a measure of distance between objects than representing them as numerical vectors. Consider for example strings. You could translate them into numbers based on their encoding, but the space of possible strings is vast—infinite if you do not restrict their length—so it is not a practical approach. However, there are many measures of how different two strings are.  
+For strings, at least, it is easier to define a distance measure than a mapping into numeric values. When what we have is a distance measure we can represent our data as a distance matrix. Multidimensional scaling takes such a matrix of all pair-wise distances and maps each data point into a linear space while preserving the pair-wise distances as well as possible.  
 Consider the iris dataset again. For this dataset, of course, we do have the data points represented as numerical vectors, but it is a dataset we are familiar with so it is good to see the new method in use on it.
 ```{r distance_matrix}
 suppressMessages(library(dplyr))
@@ -21,5 +33,43 @@ mds_iris %>%
   cbind(Species = iris$Species) %>%
   ggplot(aes(x = V1, y = V2, colour = Species)) +
   geom_point()
+```
+
+```{r voting_data_scaling}
+mds_votes <- vote_patterns %>% dist %>% cmdscale(k = 2)
+mds_votes %>%
+  as.data.frame %>%
+  cbind(Class = HouseVotes84$Class) %>%
+  ggplot() +
+  geom_point(aes(x = V1, y = V2, colour = Class))
+```
+
+### Distance matrix between strings
+```{r strings_distance}
+#generate several strings of random DNA sequences of random length
+random_ngram <- function(n){
+  sample(c("A","C","T","G"), n, replace = TRUE) %>%
+  paste0(collapse = "") #changes vector of chars into a single string
+}
+random_string <- function(m){
+  n <- max(1, m + sample(c(-1,1), size = 1) * rgeom(1, 1/2))
+  random_ngram(n)
+}
+strings <- replicate(10, random_string(5))
+
+#compute the distance matrix
+#install.packages("stringdist")
+library(stringdist)
+string_dist <- stringdistmatrix(strings)
+
+#multidimenstional scaling
+string_dist %>%
+  cmdscale(k = 2) %>%
+  as.data.frame %>%
+  cbind(String = strings) %>%
+  ggplot(aes(x = V1, y = V2)) +
+  geom_point() +
+  geom_label(aes(label = String), hjust = 0, nudge_y = -0.1)
+
 ```
 

@@ -1,0 +1,112 @@
+---
+title: "Clustering"
+author: "Jindra"
+date: "12/1/2017"
+output: html_document
+---
+
+### Setup
+```{r setup}
+suppressMessages(library(dplyr))
+library(tidyr)
+library(ggplot2)
+library(mlbench)
+```
+
+## Clustering
+Clustering methods seek to find similarities between data points and group data according to these similarities. Such clusters can either have a hierarchical structure or not; when the structure is hierarchical, each data point will be associated with several clusters, ordered from the more specific to the more general, and when the structure is not hierarchical any data point is typically only assigned a single cluster.
+
+### k-means clustering
+In k-means clustering you attempt to separate the data into k clusters, where you determine the number k. The method will work as long as you have a way of computing the mean of a set of data points and the distance between pairs of data points
+
+```{r k_means}
+clusters <- iris %>%
+  select(-Species) %>% #only numerical data can be used
+  kmeans(centers = 3)
+
+#centers and clusters are the most interesting parameters
+clusters$centers
+clusters$cluster %>% head
+clusters$cluster %>% table #sums points in each cluster
+
+#how many data points from each species are assigned to each cluster
+iris %>%
+  cbind(Cluster = clusters$cluster) %>%
+  ggplot() +
+  geom_bar(aes(x = Species, fill = as.factor(Cluster)),
+           position = "dodge") +
+  #"dodge" results are plotted next to each other not stacked on top of each other
+  scale_fill_discrete("Cluster")
+```
+```{r k_means_my_plotting}
+data("iris")
+iris %>%
+  ggplot(aes(x = Petal.Length,
+             y = Petal.Width,
+             colour = as.factor(clusters$cluster))) +
+  scale_colour_manual("Cluster", values = c("1" = "blue",
+                                            "2" = "red",
+                                            "3" = "green")) +
+  geom_point()
+
+#compare with original data
+map_source <- function(df,cl){
+  orig_df <- df %>% mutate(Source = "data (original)",
+                           Species.new = as.factor(Species))
+  cluster_df <- df %>% mutate(Source = "k-means clusters",
+                              Species.new = as.factor(cl))
+  ret = rbind(orig_df, cluster_df)
+}
+iris %>% 
+  map_source(clusters$cluster) %>%
+  gather(key, value, Source) %>%
+  ggplot(aes(x = Petal.Length,
+             y = Petal.Width,
+             colour = Species.new)) +
+  geom_point() +
+  facet_grid(. ~ value)
+  
+```
+
+We can use the results of PCA and combine it in plot with the results of k-means
+```{r pca_k_means}
+pca <- iris %>%
+  select(-Species) %>%
+  prcomp
+
+mapped_iris <- pca %>%
+  predict(iris)
+
+mapped_centers <- pca %>%
+  predict(clusters$centers)
+
+mapped_iris %>%
+  as.data.frame %>%
+  cbind(Species = iris$Species,
+        Clusters = as.factor(clusters$cluster)) %>%
+  ggplot() +
+  geom_point(aes(x = PC1, y = PC2,
+                 colour = Species,
+                 shape = Clusters)) +
+  geom_point(aes(x = PC1, y = PC2),
+             size = 5, shape = "X",
+             data = as.data.frame(mapped_centers))
+```
+If you think that some of the square points are closer to the center of the “triangular cluster” than the center of the “square cluster”, or vice versa, you are right. Don’t be too disturbed by this; two things are deceptive here. One is that the axes are not on the same scale, so distances along the x-axis are farther than distances along the y-axis. A second is that the distances used to group data points are in the four-dimensional space of the original features, while the plot is a projection onto the two-dimensional plane of the first two principal components.  
+There is something to worry about, though, concerning distances. The algorithm is based on the distance from cluster centers to data points, but if you have one axis in centimeters and another in meters, a distance along one axis is numerically a hundred times farther than along the other.  
+This is also an issue for principal component analysis. The usual solution is to rescale all input features so they are centered at zero and have variance one. You subtract from each data point the mean of the feature and divide by the standard deviation.
+
+```{r confusion_matrix}
+table(iris$Species, clusters$cluster)
+```
+One problem here is that the clustering doesn’t know about the species, so even if there were a one-to-one corresponding between clusters and species, the confusion matrix would only be diagonal if the clusters and species were in the same order.  
+We can associate each species to the cluster most of its members are assigned to. This isn’t a perfect solution—two species could be assigned to the same cluster this way, and we still wouldn’t be able to construct a confusion matrix.
+```{r confusion_matrix_2}
+tbl <- table(iris$Species, clusters$cluster)
+(counts <- apply(tbl, 1, which.max))
+map <- rep(NA, each = 3)
+map[counts] <- names(counts)
+table(iris$Species, map[clusters$cluster])
+```
+
+A final word on k-means is this: Since k is a parameter that needs to be specified, how do you pick it? There are several rules of thumbs, but there is no perfect solution you can always apply.

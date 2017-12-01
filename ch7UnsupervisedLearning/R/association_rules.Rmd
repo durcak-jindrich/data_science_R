@@ -1,0 +1,52 @@
+---
+title: "Association rules"
+author: "Jindra"
+date: "12/1/2017"
+output: html_document
+---
+### Setup
+```{r setup}
+suppressMessages(library(dplyr))
+library(ggplot2)
+library(mlbench)
+#install.packages("arules")
+library(arules)
+library(kernlab)
+```
+
+### Association Rules
+The last unsupervised learning method we will see is aimed at categorical data, ordered or unordered. Just like you have to translate factors into numerical data to use methods such as PCA, you will need to translate numerical data into factors to use association rules. This typically isn’t a problem, and you can use the function cut() to split a numerical vector into a factor and combine it with ordered() if you want it ordered.  
+When all columns are factorial, the dataframe can be used for association rules
+```{r association_rules}
+data("income")
+income %>% head
+
+#the same data is also available in the arule package
+data(Income)
+Income %>% head
+
+#construct the rules
+rules <- income %>% apriori
+rules %>% head %>% inspect(linebreak = FALSE) #The linebreak = FALSE splits the rules over several lines. It is confusing that it has to be FALSE, but that is how it is
+```
+
+* support : The fraction of the data where both X and Y holds true. Think of it as Pr(X,Y).
+* confidence : The fraction of times where X is true that Y is also true. Think of it as Pr(Y|X).
+* lift : How much better than random is the rule, in the sense that how much better is it compared to X and Y being independent. Think Pr(X,Y)/Pr(X)Pr(Y).  
+Good rules should have high enough support to be interesting. If a rule only affects a tiny number of data points out of the whole data it isn’t that important, so you want both support and confidence to be high. It should also tell you more than what you would expect by random chance, which is captured by lift.
+
+```{r ar_2}
+#rearrange the data according to the quality measures
+rules %>%
+  sort(by = "lift") %>%
+  head %>%
+  inspect(linebreak = FALSE)
+
+#combine it with subset function
+rules %>%
+  subset(support > 0.5) %>%
+  sort(by = "lift") %>%
+  head %>%
+  inspect(linebreak = FALSE)
+```
+
