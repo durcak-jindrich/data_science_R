@@ -1,0 +1,175 @@
+---
+title: "Data science sample project"
+author: "Jindra"
+date: "12/2/2017"
+output: html_document
+---
+
+### Data
+The data contains physicochemical features measured from Portuguese Vinho Verde wines, and the goal was to try to predict wine quality from these measurements.
+```{r data}
+red <- read.table("data/winequality-red.csv", header = TRUE, sep = ";")
+white <- read.table("data/winequality-white.csv", header = TRUE, sep = ";")
+
+#combine the data and add a column describing the wine type
+wines = rbind(data.frame(type = "red", red),
+              data.frame(type = "white", white))
+summary(wines)
+```
+
+With the data loaded, we first want to do some exploratory analysis to get a feeling for it.
+```{r explore_data}
+suppressMessages(library(dplyr))
+library(ggplot2)
+# wines %>%
+#   ggplot(aes(x = quality, y = ..count.., fill = type)) +
+#   geom_histogram(position = "dodge") +
+#   xlab("Quality") +
+#   ylab("Frequency")
+wines %>%
+  ggplot() +
+  geom_bar(aes(x = factor(quality), fill = type),
+           position = 'dodge') +
+  xlab('Quality') + ylab('Frequency')
+```
+There are very few wines with extremely low or high scores. The quality scores also seem normal-distributed, if we ignore that they are discrete. This might make the analysis easier.
+
+### Red or White?
+Can physicochemical features available in the data help decide whether a wine is red or white?
+```{r red_or_white}
+#Naive Bayes
+library(e1071)
+random_group <- function(n, probs) {
+  probs <- probs / sum(probs)
+  g <- findInterval(seq(0, 1, length = n), c(0, cumsum(probs)),
+                    rightmost.closed = TRUE)
+  names(probs)[sample(g)]
+}
+
+partition <- function(df, n, probs) {
+  replicate(n, split(df, random_group(nrow(df), probs)), FALSE)
+}
+
+accuracy <- function(confusion_matrix)
+  sum(diag(confusion_matrix))/sum(confusion_matrix)
+
+prediction_accuracy_wines <- function(test_and_training) {
+  result <- vector(mode = "numeric",
+                   length = length(test_and_training))
+  for (i in seq_along(test_and_training)) {
+    training <- test_and_training[[i]]$training
+    test <- test_and_training[[i]]$test
+    model <- training %>% naiveBayes(type ~ ., data = .)
+    predictions <- test %>% predict(model, newdata = .)
+    targets <- test$type
+    confusion_matrix <- table(targets, predictions)
+    result[i] <- accuracy(confusion_matrix)
+  }
+  result
+}
+random_wines <- wines %>%
+    partition(4, c(training = 0.5, test = 0.5))
+random_wines %>% prediction_accuracy_wines
+```
+This is a pretty good accuracy, so this raises the question of why experts cannot tell red and white wine apart.
+
+Determine the most significant features that divide red and white wines by building a decision tree.
+```{r decision_tree}
+library('party')
+# limit the number of splits made to get only the most important features
+tree <- ctree(type ~ ., data = wines,
+              control = ctree_control(minsplit = 4420))
+plot(tree)
+```
+From the tree, we see that the total amount of sulfur dioxide, a chemical compound often added to wines to prevent oxidation and bacterial activity, which may ruin the wine, is chosen as the root split.  
+Sulfur dioxide is also naturally present in wine in moderate amounts. In the EU the quantity of sulfur dioxide is restricted to 160 ppm for red wine and 210 ppm for white wines, so by law, we actually expect a significant difference of sulfur dioxide in the two types of wine. Look into that:
+```{r so2}
+wines %>% 
+  group_by(type) %>%
+  summarise(total.mean = mean(total.sulfur.dioxide),
+            total.sd = sd(total.sulfur.dioxide),
+            free.mean = mean(free.sulfur.dioxide),
+            free.sd = sd(free.sulfur.dioxide))
+```
+The average amount of total sulfur dioxide is indeed lower in red wines, and thus it makes sense that this feature is picked as a significant feature in the tree.
+
+Another significant feature suggested by the tree is the volatile acidity, also known as the vinegar taint. In finished (bottled) wine a high volatile acidity is often caused by malicious bacterial activity, which can be limited by the use of sulfur dioxide, as described earlier. Therefore we expect a strong relationship between these features
+```{r volatile_acidity}
+wines %>%
+  ggplot() +
+  geom_jitter(aes(x = total.sulfur.dioxide, 
+                 y = volatile.acidity,
+                 colour = type),
+              alpha = 0.4) +
+  xlab("Total sulfur dioxide") +
+  ylab("Volatile acidity (VA)")
+# qplot(total.sulfur.dioxide, volatile.acidity, data=wines,
+#       color = type,
+#       xlab = 'Total sulfur dioxide',
+#       ylab = 'Volatile acidity (VA)')
+```
+
+So why can humans not taste the difference between red and white wines? It turns out that sulfur dioxide cannot be detected by humans in free concentrations of less than 50 ppm. Although the difference in total sulfur dioxide is very significant between the two types of wine, the free amount is on average below the detection threshold, and thus humans cannot use it to distinguish between red and white.
+```{r free_so2}
+wines %>%
+  group_by(type) %>%
+  summarise(mean.va = mean(volatile.acidity),
+            sd.va = sd(volatile.acidity))
+```
+Similarly, acetic acid (which causes volatile acidity) has a detection threshold of 0.7 g/L, and again we see that the average amount is below this threshold and thus is undetectable by the human taste buds.
+
+### Fitting models
+Regardless of whether we can tell red wine and white wine apart, the real question we want to explore is whether the measurements will let us predict quality. Some of the measures might be below human tasting ability, but the quality is based on human tasters, so can we predict the quality based on the measurements?  
+Before we build a model, though, we need something to compare the accuracy against that can be our null-model. If we are not doing better than a simplistic model, then the model construction is not worth it.  
+Of course, first, we need to decide whether we want to predict the precise quality as categories or whether we consider it a regression problem. Since we should mostly look at the quality as a number, we will only look at the latter.  
+For regression, the quality measure should be the root mean square error and the simplest model we can think of is just to predict the mean quality for all wines.  
+```{r}
+rmse <- function(y,t) sqrt(mean((y - t) ** 2))
+rmse_orig <- function(x,t) sqrt(mean(sum((t - x)^2)))
+null_prediction <- function(df) {
+    rep(mean(wines$quality), each = nrow(df))
+}
+rmse(null_prediction(wines), wines$quality)
+rmse_orig(null_prediction(wines), wines$quality)
+```
+
+We do want to compare models with training and test datasets, though, so not use the mean for the entire data. So we need a function for comparing the results with split data.  
+To compare different models using rmse() as the quality measure we need to modify our prediction accuracy function. We can give it as parameter the function used to create a model that works with predictions.
+```{r}
+prediction_accuracy_wines <- function(test_and_training,model_function) {
+result <- vector(mode = "numeric",
+                 length = length(test_and_training))
+  for (i in seq_along(test_and_training)) {
+    training <- test_and_training[[i]]$training
+    test <- test_and_training[[i]]$test
+    model <- training %>% model_function(quality ~ ., data = .)
+    predictions <- test %>% predict(model, newdata = .)
+    targets <- test$quality
+    result[i] <- rmse(predictions, targets)
+  }
+  result
+}
+
+null_model <- function(formula, data) {
+    structure(list(mean = mean(data$quality)),
+              class = "null_model")
+}
+
+predict.null_model <- function(model, newdata) {
+    rep(model$mean, each = nrow(newdata))
+}
+```
+
+This null_model() function creates an object of class null_model and defines what the predict() function should do on objects of this class. We can use it to test how well the null model will perform on data:
+```{r}
+test_and_training <- wines %>%
+    partition(4, c(training = 0.5, test = 0.5))
+test_and_training %>% prediction_accuracy_wines(null_model)
+```
+
+Don’t be too confused about these numbers being much better than the one we get if we use the entire dataset. That is simply because the rmse() function will always give a larger value if there is more data and we are giving it only half the data that we did when we looked at the entire dataset.  
+We can instead compare it with a simple linear model:
+```{r}
+test_and_training %>% prediction_accuracy_wines(lm)
+```
+
