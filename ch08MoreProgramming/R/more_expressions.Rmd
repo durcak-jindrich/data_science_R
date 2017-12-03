@@ -1,0 +1,118 @@
+---
+title: "Expressions revisited"
+author: "Jindra"
+date: "12/3/2017"
+output: html_document
+---
+## Expressions and precedence
+```{r precedence}
+x = 5
++x
+-x
+
+#Division will return a floating-point number even if both its operands are integers
+10/x
+11/x
+
+#integer division
+9 %/% x
+
+#remainder of integer division
+9 %% x
+
+#exponentiation
+x^2
+x**2
+
+#precedence of ":" operator - exonentiation -> ":" -> multiplication
+1:2**2 #exponentiation first
+1:2*2 # ":" first
+-1:2 # "-" first
+-(1:2)
+
+#functions are evaluated before the operators:
+1:sqrt(4)
+```
+
+### Boolean expressions
+```{r bool}
+TRUE
+T
+FALSE
+F
+
+#negate the expression
+!TRUE  # = FALSE
+!FALSE # = TRUE
+
+#The | and || are logical “or” operators while & and && are logical “and” operators.
+T | F
+F || F
+T & F
+T && T
+```
+
+The difference between | and || or & and && are how they deal with vectors. The one-character version will apply the operator element-wise and create a vector while the two-character version will only look at the first value in vectors.
+```{r bool_2}
+x <- c(TRUE, FALSE, TRUE, FALSE)
+y <- c(TRUE, TRUE, FALSE, FALSE)
+
+x | y
+x || y
+x & y
+x && y
+```
+
+We typically use the two-character version in control structures like if—since these do not operate on vectors in any case. We use the one-character version when we need to compute with Boolean arithmetic, when we want our expressions to work as vectorized expressions.  
+Incidentally, all the arithmetic operators work like the | and & operators when operating on more than one value, i.e., they operate element-wise on vectors.
+
+## Basic data types
+There are a few basic types in R: numeric, integer, complex, logical, and character.
+```{r types}
+#The numeric type is what you get any time you write a number into R
+is.numeric(2)
+class(2)
+```
+
+The integer type is used for, well, integers. Surprisingly, the 2 is not an integer in R. It is a numeric type which is the larger type that contains all floating-point numbers as well as integers. To get an integer you have to make the value explicitly an integer, and you can do that using the function as.integer or writing L after the literal.
+```{r types_2}
+is.integer(2)
+is.integer(2L)
+x <- as.integer(2)
+is.integer(x)
+class(x)
+x <- c(2L, 3L, 4L) #integers
+x <- c(2, 3, 4) #numerics
+
+#If you translate a non-integer into an integer, you just get the integer part.
+as.integer(3.3)
+as.integer(9.9)
+```
+
+### Complex numbers
+```{r complex_types}
+1 + 0i
+is.complex(1 + 0i)
+class(1 + 0i)
+sqrt(as.complex(-1))
+```
+
+### Logical types
+```{r logic}
+x <- 5 > 4
+x
+class(x)
+is.logical(x)
+```
+
+### Character type
+```{r}
+x <- "hello, world"
+class(x)
+is.character(x)
+
+#Convertions between types:
+as.character(3.14)
+```
+
+Unlike in some languages, character doesn’t mean a single character but any text. So it is not like in C or Java where you have single character types, 'c', and multi-character strings, "string", they are both just characters.

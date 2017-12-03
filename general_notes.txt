@@ -11,6 +11,9 @@ HelloWorld("Hello", "World", "!")
 -When you do want to insert a <br /> break tag using Markdown, you end a line with two or more spaces, then type return.
 You can also use the <br> tag
 -When you need to use the same random numbers across several part of Rmarkdown, r chunk can be cached
+-Division will return a floating-point number even if both its operands are integers
+-R always works on vectors (a single number is a vector with length = 1)
+-infix operators = classic math: infix addition = 1 + 2 (nothing special)
 
 literate programming - The idea in literate programming is that the documentation of a program—in the sense of the documentation of how the program works and how algorithms and data structures in the program works—is written together with the code implementing the program
 - R Markdown (for writing these documents) and knitr (for running the analysis and generating the reports)

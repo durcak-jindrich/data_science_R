@@ -1,0 +1,134 @@
+---
+title: "Data structures"
+author: "Jindra"
+date: "12/3/2017"
+output: html_document
+---
+
+## Vectors
+Vectors are sequences of values all of the same type. Whenever we have seen expressions involving single numbers, we have actually seen vectors containing a single value, so we have never seen anything that wasn’t a vector.  
+What I have called vectors up till now is technically known as “atomic sequences”. Those are any sequences of the basic types described previously. You create these by concatenating basic values using the c function or through some other operator or function, e.g., the : operator or the rep function
+```{r}
+(x <- c(1,2,3))
+(x <- 1:3)
+rep("foo",3)
+is.atomic(x)
+```
+
+There is also something in R that is explicitly called a vector. In practice, there is no confusion because all the atomic sequences I have called vectors are also vectors.
+```{r}
+v <- 1:3
+is.vector(v)
+```
+It is just that R only consider such a sequence a vector—in the sense that is.vector returns TRUE—if the object doesn’t have any attributes (except for one, names, which it is allowed to have).  
+Attributes are meta-information associated with an object. Be aware that is.vector will be FALSE if something that is a perfectly good vector gets an attribute.
+```{r}
+v <- 1:3
+is.vector(v)
+attr(v, "foo") <- "bar"
+v
+is.vector(v)
+```
+So if you want to test if something is the kind of vector in traditional sense, use is.atomic instead.
+```{r}
+#nested concatenate
+c(1, c(2:4), c(5:8))
+#The type might change, if you try to concatenate vectors of different types, R will try to translate the type into the most general type of the vectors.
+c(1, 2, 3, "foo")
+```
+
+## Matrix
+Two-dimensional vector. dimensions of a vector can be specified by the dim function—it sets one of those attributes we talked about previously—where you specify the number of rows and the number of columns.
+```{r}
+v <- 1:6
+(attributes(v))
+dim(v) <- c(2,3)
+(attributes(v))
+(dim(v))
+(v)
+```
+When you do this, the values in the vector will go in the matrix column-wise, i.e., the values in the vector will go down the first column first and then on to the next column and so forth.  
+You can use the convenience function matrix to create matrices and there you can specify if you want the values to go by column or by row using the byrow parameter.
+```{r}
+matrix(c(1:6), 2, 3)
+matrix(c(1:6), nrow = 2, ncol = 3)
+matrix(c(1:6), nrow = 2, ncol = 3, byrow = FALSE)
+matrix(c(1:6), nrow = 2, ncol = 3, byrow = TRUE)
+```
+
+### Matrix operations
+Wit arithmetic operations, <b>the * operator will not do matrix multiplication</b>. You use * if you want to make element-wise multiplication; for matrix multiplication you need the operator %*% instead.
+```{r}
+(A <- matrix(c(1:4), nrow = 2))
+(B <- matrix(c(5:8), nrow = 2))
+class(A)
+A * B   #element wise multiplication
+A %*% B #matrix multiplication
+
+#matrix transposition
+t(A)
+
+#matrix inversion
+solve(A)
+solve(A) %*% A
+```
+Higher dimensional vectors, called arrays, are created by setting the dimension attribute with more than two dimensions as arguments or you can use the array function.
+
+## Lists
+Lists, like vectors, are sequences, but unlike vectors, the elements of a list can be any kind of objects, and they do not have to be the same type of objects. This means that you can construct more complex data structures out of lists.
+```{r}
+#list of two vetors
+list(1:3, 5:8)
+#different types
+list(1:3,c(T,F))
+#lists can contain other lists, you can build tree-like data structures
+list(list(), list(list(), list()))
+```
+
+You can flatten a list into a vector using the function unlist(). This will force the elements in the list to be converted into the same type, of course, since that is required of vectors.
+```{r}
+unlist(list(1:4,5:8))
+```
+
+
+## Indexing
+```{r}
+?'[[' #many indexing options
+v <- 1:4
+v[1] #vector indexing is easy
+v[2:3]
+v[c(1,1,4,2,3,4)]
+v[-1] #all elements except the first
+v[-(1:2)]
+#You cannot combine positive and negative indices
+v[v %% 2 == 0] #boolean indexing
+```
+
+If you want to assign to a vector you just assign to elements you index; as long as the vector to the right of the assignment operator has the same length as the elements the indexing pulls out you will be assigning to the vector.
+```{r}
+v[v %% 2 == 0] <- 13
+v
+```
+
+If the vector has more than one dimension—remember that matrices and arrays are really just vectors with more dimensions—then you subset them by subsetting each dimension. If you leave out a dimension, you will get whole range of values in that dimension, which is a simple way to of getting rows and columns of a matrix:
+```{r}
+m <- matrix(1:6, nrow = 2, byrow = TRUE)
+m
+m[1,1]
+m[,1]
+m[1,]
+m[1:2,1:2]
+#You can tell R that it shouldn’t reduce a one-dimensional matrix to a row by giving the indexing an option drop=FALSE. It may be useful for linear algebra that the result is still matrix
+m[1,,drop = FALSE]
+m[,1,drop = FALSE]
+```
+Everything in R involves function calls. Indexing into a matrix is just another function call, and functions can take named arguments. That is all that is happening here.  
+Indexing in lists is similar. When you subset a list using [] the result is always another list. If this surprises you, just remember that when you subset a vector you also always get a vector back. You just don’t think so much about it because the way we see single values are always as vectors of length one, so we are more used to that.
+```{r}
+L <- list(1,2,3)
+L
+L[1] #the result is a list with one element
+L[2:3]
+L[[1]] #the result is whatever is the first element in the list L (the actual element)
+```
+
