@@ -48,7 +48,7 @@ iris %>% tbl_df %>%
   select(Species, Sepal.Length) %>%
   head(3)
 
-# split data into subtables based on olumn values -  group_by()
+# split data into subtables based on column values -  group_by()
 iris %>% tbl_df %>% group_by(Species) %>% head(3)
 
 #calculate summary statistics - summarize()\summarize() (most powerful with group_by)

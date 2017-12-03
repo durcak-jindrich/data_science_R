@@ -269,7 +269,7 @@ iris %&gt;% tbl_df %&gt;% filter(Sepal.Length &gt; 5) %&gt;% head(3)</code></pre
 ## 1 virginica          6.3
 ## 2 virginica          5.8
 ## 3 virginica          7.1</code></pre>
-<pre class="r"><code># split data into subtables based on olumn values -  group_by()
+<pre class="r"><code># split data into subtables based on column values -  group_by()
 iris %&gt;% tbl_df %&gt;% group_by(Species) %&gt;% head(3)</code></pre>
 <pre><code>## # A tibble: 3 x 5
 ## # Groups:   Species [1]
