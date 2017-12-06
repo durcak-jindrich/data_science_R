@@ -1,0 +1,31 @@
+---
+title: "Excercise"
+author: "Jindra"
+date: "12/6/2017"
+output: html_document
+---
+### Outer product
+Write a function that computes the outer product of two vectors.  
+u ⊗ v = uv<sup>t</sup>  
+$u ⊗ v = uv^{t}$
+```{r}
+u = matrix(1:4, nrow = 4)
+v = matrix(5:7, nrow = 3) 
+op <- function(u,v){
+  u %*% t(v)
+}
+op(u,v)
+base::outer(u,v)
+```
+
+### Prealocate a vector
+If a vector is preallocated, then R does not copy all the elements everytime something is added to the vector
+```{r}
+n <- 5
+v <- vector(length = n)
+v
+
+#similarly for lists
+vector("list", length = n)
+```
+

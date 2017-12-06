@@ -132,3 +132,36 @@ L[2:3]
 L[[1]] #the result is whatever is the first element in the list L (the actual element)
 ```
 
+### Named values
+The elements in a vector or a list can have names. These are attributes that do not affect the values of the elements but can be used to refer to them. You can set these names when you create the vector or list:
+```{r}
+#names can be set straightly
+v <- c(a = 1, b = 2, c = 3, d = 4)
+v
+L <- list(a = 1:5, b = c(T,F))
+L
+
+#names can be set with function
+names(v) = c("new-a","new-b","age","height")
+v
+names(v) <- LETTERS[1:4]
+v
+
+#use names for indexing
+v["A"]
+L["a"]
+L[["a"]]
+
+#When you have named values, you can also use a third indexing operator, the $ operator.
+#It essentially works like [[]] except that you don’t have to put the name in quotes
+L$a
+
+# "[[]]" can be rarely used for vectors. If ir is use the [[]] operator on a vector it will only let you extract a single element, and if the vector has names, it will remove the name.
+v[["A"]]
+```
+
+### Factors
+It is technically also a vector type, but it isn’t a primitive type in the same sense as the previous types. It is stored as a vector of integers—the levels in the factor—and has associated attributes such as the levels
+
+### Formulas
+Another data type. It can be created using the ~ operator. Like factors, the result is an object defined using a class. Formulas can be used to implement custom statistical models via model matrices

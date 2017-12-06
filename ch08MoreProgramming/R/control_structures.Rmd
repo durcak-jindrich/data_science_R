@@ -1,0 +1,90 @@
+---
+title: "Control structures"
+author: "Jindra"
+date: "12/4/2017"
+output: html_document
+---
+
+### Selection statements
+Like many other programming languages you have two kinds of control structures in R: select (if statements) and loops (for, while, or repeat statements).
+```r
+if (x < 0) {
+    # handle negative x            
+} else if (x > 0) {
+    # handle positive x            
+} else {
+    # handle if x is zero            
+}
+
+#one liner
+if (x > 0) "positive" else if (x < 0) "negative" else "zero"
+```
+
+The most common loop is the for loop
+```{r loop}
+for (i in 1:4){
+  print(i)
+}
+
+#to loop over the indeces
+x <- c("foo", "cer", "bar")
+for(i in seq_along(x)){
+  print(i)
+  print(x[i])
+}
+```
+
+Sometimes people use explicitely length. You will see code that uses this construction:
+```r
+for (i in 1:length(x)) {
+    # do stuff            
+}
+```
+Don’t do that. It won’t work if the sequence x is empty.
+```r
+x <- c()
+1:length(x)
+## [1] 1 0
+```
+
+If you want to jump to the next iteration of a loop, you can use the next keyword. It is the analogy of continue in Java or Python.
+```{r}
+for (i in seq_along(x)) {
+    if (i %% 2 == 0) {
+        next
+    }
+    print(x[i])
+}
+```
+
+Break works the same as in Python or Java:
+```{r}
+for (i in 1:100) {
+    if (i %% 2 == 0) {
+        next
+    }
+    if (i > 5) {
+        break
+    }
+    print(i)
+}
+```
+There are also "while" and "repeat" loops. While is the same as Python or Java, repeat loop is being executed until "break".
+```{r}
+i <- 1
+while (i < 5) {
+  print(i)
+  i <- i + 1
+}
+i <- 1
+repeat {
+  print(i)
+  i <- i + 1
+  if (i > 5)
+    break
+}
+
+```
+
+If you read more about R you will soon run into the statement that loops are slow in R. It isn’t really as bad as some make it out to be, but it is somewhat justified.  
+Because R is an extremely dynamic language—functions and variables can change at any time during program execution—it is hard for the interpreter to optimize code before it runs it, unlike in some other languages (but not that different from other dynamic languages such as Python)

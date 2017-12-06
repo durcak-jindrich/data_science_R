@@ -1,0 +1,261 @@
+---
+title: "Functions"
+author: "Jindra"
+date: "12/4/2017"
+output: html_document
+---
+
+### Simple functions
+Recap the definition of function:
+```r
+my_func <- function(parameters) expression
+my_func <- function(parameters) {
+  expressions
+}
+```
+
+Simple function
+```{r}
+f <- function(){
+  print("Hello")
+  5
+}
+f()
+```
+With arguments
+```{r}
+plus <- function(x, y) {
+  print(paste(x, " + ", y, " is ", x + y))
+  x + y
+}
+
+div <- function(x, y) {
+  print(paste(x, " / ", y, " is ", x / y))
+  x / y
+}
+
+plus(2,2)
+div(6,2)
+div(2,6)
+```
+
+### Named arguments
+If a function has many arguments, though, it can be hard always to remember the order, so there is an alternative way to specify which variable is given which values: named arguments.
+```{r}
+div(x = 6, y = 2)
+div(y = 2, x = 6)
+```
+You cannot use <- for specifying named variables.
+```{r}
+div(x <- 6, y <- 2)
+div(y <- 2, x <- 6)
+
+```
+The assignment operator <- returns a value and that is passed along to the function as positional arguments. So in the second function call above you are assigning 2 to y and 6 to x in the scope outside the function, but the values you pass to the function are positional so inside the function you have given 2 to x and 6 to y.
+
+### Default parameters
+When you define a function, you can provide default values to parameters like this:
+```{r}
+pow <- function(x, y = 2) x^y
+pow(2)
+pow(3)
+pow(2,4)
+```
+Default parameter values will be used whenever you do not provide the parameter at the function call.
+
+### Return values
+The return value of a function is the last expression in the statements executed in the function body. If the function is a sequence of statements, this is just the last statement in the sequence, but by using control structures, you can have different statements as the last statement:
+```{r}
+safer_div <- function(x, y) {
+    if (y == 0) {
+        NA
+    } else {
+        x / y
+    }
+}
+safer_div(4, 2)
+safer_div(4, 0)
+```
+
+It is also possible to return explicitly from a function—similarly to breaking from a loop—using the return() statement:
+```{r}
+safer_div <- function(x, y) {
+    if (y == 0) {
+        return(NA) #the parentheses are necessary
+    }
+    x / y
+}
+safer_div(4, 2)
+safer_div(4, 0)
+```
+
+### Lazy evaluations
+Several places I have written about providing values to the function parameters when we call a function. In many programming languages this is exactly how function calls work—the expressions provided for each parameter are evaluated, and the results are assigned to the function parameters so the function can use them in the function body—but in R it is actually the expressions that are assigned to the function parameters. And the expressions are not evaluated until they are needed; something called lazy evaluation.
+The first benefit is that it makes default parameters more flexible. We can write a function like this:
+```{r}
+f <- function(x, y = x^2) y + x
+f(2) # = f(2,2^2)
+f(2,2^2)
+f(2,3) # = f(2,3)
+```
+At the time where the function is declared the value of x is not know but y is not evaluated there so it doesn’t matter.
+But it also has unexpected consequences. Since y isn’t evaluated before it is used, it does also mean that if you assign a different value to x before you use y then y evaluates to a value that depends on the new value of x. Not the value of x at the time the function was called!
+```{r}
+g <- function(x, y = x^2){
+  x <- 0
+  x + y
+}
+g(2) # result is zero because y is used after x <- 0, so y = 0^2
+g(2,2) # y = 2 from the beginning and the expression y = x^2 is not evaulated
+
+h <- function(x , y = x^2){
+  y
+  x <- 0
+  x + y
+}
+h(2) # y is used before x is set to zeto, therefore y = 2^2 and result is 4
+```
+So lazy evaluation lets you specify default parameters that depend on other parameters in a context where those parameters are unknown, but it comes at the prize of the value of the parameter depending on the context at the first time it gets evaluated.  
+Although it may be weird sometimes, there is another benefits of lazy evaluation: you only evaluate an expression if you actually need it.
+
+### Scoping
+Scope in R is lexical. This means that if a variable is used in a function but not defined in the function or part of the function’s parameters, then R will start searching outward in the code from where the function was created. This essentially means searching outward and upward from the point in the code where the function is specified, since a function is created when the code is executed where the function is defined.
+
+```{r}
+x <- "1"
+f <- function(y) {
+    g <- function() c(x, y)
+    g()
+}
+f("y")
+```
+Inside g, we have not defined x or y, so to find their values R will search outward from where g is created. It will find y as the argument of the function f so get it from there and continue outward to find x at the global level.  
+The variables that g refers to are the variables and not the values at the time that g is created, so if we update the variables after we create g, we also change the value that g will return:
+```{r}
+x <- "x"
+f <- function(y) {
+  g <- function() c(x, y)
+  y <- "z"
+  g()
+}
+f("y")
+```
+This isn’t just the lazy evaluation madness—it is not that g hasn’t evaluated y yet and it, therefore, can be changed. It does look up the value of y when it needs it:
+```{r}
+x <- "x"
+f <- function(y) {
+  g <- function() c(x, y)
+  g()
+  y <- "z"
+  g()
+}
+f("y")
+```
+
+### Closures
+If we return the function g from f rather than the result of evaluating it, we see another feature of R’s scoping—something called closures. R remembers the values of variables inside a function that we have returned from and that is no longer an active part of our computation.  
+In the example below, we returned the function g at which point there is no longer an active f function. So there is not really an active instance of the parameter y any longer. Yet g refers to a y, so the parameter we gave to f is actually remembered.
+```{r}
+x <- "x"
+f <- function(y) {
+  g <- function() c(x, y)
+  g
+}
+g <- f("y")
+g()
+g <- f("u")
+g()
+```
+Invoke f twice:
+```{r}
+x <- "x"
+f <- function(y) {
+  g <- function() c(x, y)
+  g
+}
+g <- f("y")
+h <- f("z")
+g() #result "x","y"
+h() #result "x","z"
+```
+This creates two different functions. Inside f they are both called g, but they are two different functions because they are created in two different calls to f, and they remember two different y parameters because the two instances of f were invoked with different values for y.  
+When looking outward from the point where a function is defined, it is looking for the values of variables at the time a function is invoked, not the values at the time where the function is created. Variables do not necessarily have to be defined at the time the function is created; they just need to be defined when the function is eventually invoked.
+```{r}
+f <- function() {
+  g <- function() c(y, z)
+  y <- "y"
+  g
+}
+h <- f()
+#h() # Error
+z <- "z"
+h() # "x","y"
+```
+Where the function g is defined—inside function f—it refers to variables y and z that are not defined yet. This doesn’t matter because we only create the function g; we do not invoke it.
+
+### <<- operator (be careful with it)
+```{r}
+f <- function() {
+    x <- NULL
+    set <- function(val) { x <<- val }
+    # x <- val won't assign val into the "global" x, but a local variable would be created. With "<<-" val will assign it into the global x (or it will create it, if it doesn't exist)
+    get <- function() x
+    list(set = set, get = get)
+}
+
+x <- f()
+x$get()
+x$set(5)
+x$get()
+```
+If we hadn’t set the variable x inside the body of f in this example, both the getter and setter would be referring to a global variable, in case you are wondering, and the first call to get would cause an error if there was no global variable.
+# Function names are different from variable names
+if R sees something that looks like a function call, it is going to go searching for a function, even if searching outward from a function creation would get to a non-function first.
+```{r}
+n <- function(x) x
+f <- function(n) n(n)
+# Obviously - two n’s inside f actually refers to different things.
+f(5)
+#Of course, if we call f with something that is actually a function, then it recognizes that n is a function and it calls that function with itself as the argument.
+f(function(x) 15)
+```
+
+### Recursive Functions
+In a functional programming language, it is one of the most basic building blocks so it is really worth spending some time wrapping your head around, even though you are much less likely to need recursions in R than you are in most pure functional languages.  
+There are two aspects to a recursive function, though. Solving a problem for size n involves breaking down the problem into something you can do right away and combine that with calls of the function with a smaller size, here n − 1. This part we call the “step” of the recursion. We need to have reduced the problem to a size small enough that we can handle it directly. That is called the basis of the recursion.
+Typical example is factorial:
+```{r}
+xfactorial <- function(n) {
+    if (n == 1) {
+        1
+    } else {
+        n * factorial(n - 1)
+    }
+}
+
+```
+
+Another example is sorting - sort smaller sequence and then merge them -> merge sort
+```{r}
+merge <- function(x, y) {
+  if (length(x) == 0) return(y)
+  if (length(y) == 0) return(x)
+
+  if (x[1] < y[1]) {
+    c(x[1], merge(x[-1], y))
+  } else {
+    c(y[1], merge(x, y[-1]))
+  }
+}
+
+merge_sort <- function(x) {
+  if (length(x) < 2) return(x)
+
+  n <- length(x)
+  m <- n %/% 2
+
+  merge(merge_sort(x[1:m]), merge_sort(x[(m+1):n]))
+}
+
+```
+So here, using two simple recursive functions, we solved a real algorithmic problem in a few lines of code. This is typically the way to go in a functional programming language like R. Of course, when things are easier done using loops you shouldn’t stick to the pure functional recursions. Use what is easiest in any situation you are in, unless you find that it is too slow. Only then do you start getting clever.
