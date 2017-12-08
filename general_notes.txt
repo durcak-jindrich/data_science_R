@@ -17,6 +17,9 @@ You can also use the <br> tag
 -If you read more about R you will soon run into the statement that loops are slow in R (there are typically better solutions in R than to use an explicit loop statement)
 -R is a so-called functional language (among other things) and in functional languages, you typically don’t use loops
 -There is a separate assignment operator, <<-, you can use for that. It will not create a new local variable but instead search outward to find an existing variable and assign to that. If it gets all the way to the outermost global scope, though, it will create the variable there if it doesn’t already exist. (this can be used for simple getter + setter for example)
+-Control structures are not vectorized:
+	x <- 1:10
+	if (x %% 2 == 0) 5 else 15 #Only first element will be evaluated
 
 =============================
 literate programming - The idea in literate programming is that the documentation of a program—in the sense of the documentation of how the program works and how algorithms and data structures in the program works—is written together with the code implementing the program

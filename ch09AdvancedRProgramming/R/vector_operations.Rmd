@@ -1,0 +1,153 @@
+---
+title: "Vector operations"
+author: "Jindra"
+date: "12/6/2017"
+output: html_document
+---
+# Vectors are everywhere
+R doesn’t really have scalar values; all the primitive data you have is actually vectors of data. What this means is that the expressions you use in R are actually operating on vectors, not on single values.
+When you write this:
+```{r}
+(x <- 2 / 3)
+(y <- x ** 2)
+#The expressions you write are, of course, working on single values—the vectors x and y have length 1, but it is really just a special case of working on vectors.
+(x <- 1:4 / 3)
+(y <- x ** 2)
+```
+
+R works on vectors using two rules: operations are done element-wise, and vectors are repeated as needed.
+```{r}
+x <- 1:5
+y <- 6:10
+#Writing this:
+(z <- x + y)
+#Amounts to writing this:
+z <- vector(length = length(x))
+for (i in seq_along(x)) {
+    z[i] <- x[i] + y[i]
+}
+z
+```
+
+This is the case for all arithmetic expressions or for logical expressions involving | or & (but not || or &&; these do not operate on vectors element-wise). It is also the case for most functions you can call, such as sqrt or sin:
+```{r}
+sqrt((1:5)**2)
+sin(sqrt((1:5)**2))
+```
+When you have an expression that involves vectors of different lengths, you cannot directly evaluate expressions element-wise. When this is the case, R will try to repeat the shorter vector(s) to create vectors of the same length.  
+If the shorter vector(s) cannot be repeated an integer number of times to match up, R will still repeat as many times as needed to match the longest vector, but you will get a warning.
+```{r}
+x <- 1:10
+y <- 1:2
+x + y #no problem since the length(x) = n * length(y)
+z <- 1:3
+x + z #warning - length is not a multiple of shorter object length
+```
+
+In the expression you saw a while back, different vectors actually are repeated without even noticing it, because its length is 1:
+```{r}
+(x <- 1:4 / 3)
+(y <- x ** 2)
+```
+When we divide 1:4 by 3 we need to repeat the (length one) vector 3 four times to be able to divide the 1:4 vector with the 3 vector.  
+Whenever you consider writing a loop over vectors to do some calculations for each element, you should always consider using such vectorized expressions instead. It is typically much less error prone and since it involves implicit looping handled by the R runtime system, it is almost guaranteed to be faster than an explicit loop.
+
+## Control structures
+Control structures are not vectorized. For example, if statements are not. If you want to compute a vector y from vector x such that y[i] == 5 if x[i] is even and y[i] == 15 if x[i] is odd—for example—you cannot write this as a vector expression:
+```{r}
+x <- 1:10
+if (x %% 2 == 0) 5 else 15 #Only first element will be evaluated
+```
+Instead, you can use the ifelse function that works like a vectorized selection:
+```{r}
+x <- 1:10
+ifelse(x %% 2 == 0, 5, 15) #condition is evaluated for each element in vector
+```
+
+## Vectorizing functions
+When you write your own functions, you can write them so that they can also be used to work on vectors, that is, you can write them so that they can take vectors as input and return vectors as output.  
+The easiest way to make your function work on vectors is to write the body of the function using expressions that work on vectors.
+```{r}
+f <- function(x, y) sqrt(x ** y)
+f(1:6, 2)
+f(1:6, 1:2)
+```
+If you write a function where you cannot write the body this way, but where you still want to be able to use it in vector expressions, you can typically get there using the Vectorize function.  
+We can imagine that we want to map names in a class to the roles the participants in the class have. In R, we would use a list to implement that kind of tables, and we can easily write a function that uses such a table to map names to roles.
+```{r}
+role_table <- list("Thomas" = "Instructor",
+                   "Henrik" = "Student",
+                   "Kristian" = "Student",
+                   "Randi" = "Student",
+                   "Heidi" = "Student",
+                   "Manfred" = "Student")
+map_to_role <- function(name) role_table[[name]]
+#This works the way it is supposed to when we call it with a single name:
+map_to_role("Thomas")
+map_to_role("Henrik")
+#But it fails when we call the function with a vector 
+x <- c("Thomas", "Henrik", "Randi")
+#map_to_role(x) #ERROR
+# Vectorize can make it work
+map_to_role <- Vectorize(map_to_role)
+map_to_role(x)
+```
+
+## The Apply family
+Functions that deal with vectors and can for example map vector to single value.  
+The apply function takes (at least) three parameters. The first is the vector/matrix/array, the second which dimension(s) we should marginalize along, and the third the function we should apply.  
+What is meant by marginalization here is that you fix an index in some subset of the dimensions and pull out all values with that index. If we are marginalizing over rows, we will extract all the rows, so for each row, we will have a vector with an element per column, which is what we will pass the function. We can illustrate this using the paste function that creates a string of its input by concatenating it. If you marginalize on rows, it will be called on each of the two rows and will produce two strings:
+```{r}
+m <- matrix(1:6, nrow=2, byrow=TRUE)
+m
+apply(m, 1, function(x) paste(x, collapse = ":")) #on rows
+apply(m, 2, function(x) paste(x, collapse = ":")) #on columns
+apply(m, c(1,2), function(x) paste(x, collapse = ":")) #both rows and columns
+```
+If the function produces vectors (or higher dimensional vectors) as output then the output of apply will also be higher dimensional. Consider a function that takes a vector as input and duplicates it by concatenating it with itself. The strings are concatenated row-wise.
+```{r}
+m
+apply(m, 1, function(x) c(x,x))
+apply(m, 2, function(x) c(x,x))
+```
+Although it just looks that both matrices were just simply duplicated, it was duplicated either row by row or column by column. Even higher dimensions can be obtained.
+```{r}
+m
+apply(m, c(1,2), function(x) c(x,x))
+```
+
+### Additional arguments in functions
+```{r}
+sumpow <- function(x, n) sum(x) ** n
+#apply(m, 1, sumpow) #ERROR - n is missing and there is no default
+#that's the way how to do it:
+apply(m, 1, sumpow, 2)
+#it is better to name these parameters explicitly
+apply(m, 1, sumpow, n = 2)
+```
+### lapply
+The lapply function is used for mapping over a list. Given a list as input, it will apply the function to each element in the list and output a list of the same length as the input containing the results of applying the function.
+```{r}
+(lst <- list(1, 2, 3))
+lapply(lst, function(x) x**2)
+#If the elements have names, these are preserved in the output vector.
+lst <- list(a=1, b=2, c=3)
+lapply(lst, function(x) x**2)
+#more complex lists can also be provided
+lapply(list(a=1:3, b=4:6), function(x) x**2)
+#If a vector is provided instead, it will just convert it into a list (also as output)
+lapply(1:3, function(x) x**2)
+```
+ ### sapply and vapply
+The sapply function does the same as lapply, but tries to simplify the output. Essentially, it attempts to convert the list returned from lapply into a vector of some sort.
+```{r}
+apply(matrix(1:3, nrow = 1), 2, function(x) x**2)
+sapply(1:3, function(x) x**2)
+```
+
+The function vapply essentially does the same as sapply but without the guessing. You have to tell it what you want as output, and if it cannot produce that, it will give you an error rather than produce output that your program may or may not know what to do with.  
+The difference in interface between the two functions is just that vapply expects a third parameter that should be a value of the type the output should be.
+```{r}
+vapply(1:3, function(x) x**2, 1)
+```
+
