@@ -20,6 +20,8 @@ You can also use the <br> tag
 -Control structures are not vectorized:
 	x <- 1:10
 	if (x %% 2 == 0) 5 else 15 #Only first element will be evaluated
+-R’s infix operators. In R, any variable that starts and ends with % is considered an infix operator, so calling x %foo% y amounts to calling `%foo%`(x,y).
+-closure is created when we create a function inside another function and return it
 
 =============================
 literate programming - The idea in literate programming is that the documentation of a program—in the sense of the documentation of how the program works and how algorithms and data structures in the program works—is written together with the code implementing the program

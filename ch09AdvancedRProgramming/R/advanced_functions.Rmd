@@ -1,0 +1,66 @@
+---
+title: "Advanced functions"
+author: "Jindra"
+date: "12/7/2017"
+output: html_document
+---
+
+### Special names and Infix operators
+But first a word on names. Functions can have the same kind of names that variables have—after all, when we name a function, we are really just naming a variable that happens to hold a function—but we cannot have all kinds of names to the right of the assignment operator. But first a word on names.  
+Functions can have the same kind of names that variables have—after all, when we name a function, we are really just naming a variable that happens to hold a function—but we cannot have all kinds of names to the right of the assignment operator.  
+Functions with special names, that is names that you couldn’t normally put before an assignment, can be referred to by putting them in backticks, so the function if we can refer to as if.  
+Backticks can be used for any function:
+```{r}
+2 + 2
+`+`(2, 2)
+#assigning to a variable
+`%or die%` <- function(test, msg) if (!test) stop(msg)
+x <- 5
+(x != 0) %or die% "x should not be zero"
+
+x <- 0
+#(x != 0) %or die% "x should not be zero" #ERROR
+```
+If the last example looks weird to you, it may just be because you don’t know about R’s infix operators. In R, any variable that starts and ends with % is considered an infix operator, so calling x %foo% y amounts to calling `%foo%`(x,y).  
+We saw this come to good use in the dplyr package with the %>% pipe operator.
+
+### Replacement functions
+Replacement functions are functions that pretend to be modifying variables.
+```{r}
+v <- 1:4
+names(v) <- c("a","b","c","d")
+```
+What happens here is that R recognizes that you are assigning to a function call and goes looking for a function named names<-. So what we just wrote means that these are two equal expressions:
+```{r}
+names(v) <- c("a", "b", "c", "d")
+v <- `names<-`(v, c("a", "b", "c", "d"))
+```
+Replacement functions are generally used to modify various attributes of an object, and you can write your own just by using the convention that their names must end with <-:
+```{r}
+`foo<-` <- function(x, value) {
+  x$foo <- value
+  x
+}
+
+`bar<-` <- function(x, value) {
+  x$bar <- value
+  x
+}
+
+x <- list(foo=1, bar=2)
+x$foo
+foo(x) <- 3
+x$foo
+x$bar
+bar(x) <- 3
+x$bar
+```
+Keep in mind that it is just shorthand for calling a function and then reassigning the result to a variable. It is not actually modifying any data. This means that if you have two variables referring to the same object, only the one you call the replacement function on will be affected.
+```{r}
+y <- x
+foo(x) <- 5
+x
+y
+```
+
+

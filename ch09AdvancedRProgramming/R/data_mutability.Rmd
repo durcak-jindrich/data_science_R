@@ -1,0 +1,136 @@
+---
+title: "Data mutability"
+author: "Jindra"
+date: "12/8/2017"
+output: html_document
+---
+
+## How mutable are data?
+A replacement function creates a new copy so if we use it to modify an object, we are not actually changing it at all.  
+The short, and almost always correct, answer, is that you cannot modify objects ever.2 Whenever you “modify ” an object, you are creating a new copy and assigning that new copy back to the variable you used to refer to the old value.  
+This is also the case for assigning to an index in a vector or list. You will be creating a copy, and while it looks like you are modifying it, if you look at the old object through another reference, you will find that it hasn’t changed.
+```{r}
+x <- 1:4
+f <- function(x) {
+  x[2] <- 5
+  x
+}
+x
+f(x) #this is obvious. x = f(x) would change things
+x
+```
+If there is only one reference to a vector then assigning to it will not make a new copy and you will modify the vector in place as a constant time operation. If you have two references to the vector, then when you assign to it the first time, a copy is created that you can then modify in place. This approach to have immutable objects and still have some efficiency is called copy on write.  
+
+**To write correct programs, always keep in mind that you are not modifying objects but creating copies.  
+To write efficient programs, also keep in mind that for primitive functions you can do efficient updates (as long as you only have one reference to that object.).**
+
+## Functional programming
+Several features of functional programming:
+
+1. You should be able to pass functions along as parameters to other functions
+2. You should be able to create anonymous functions 
+3. You should have closures.
+
+### Anonymous functions
+n R it is pretty easy to create anonymous functions: just don’t assign the function definition to a variable name.  
+There are usually two reasons for anonymous functions. Both cases are typically used when a function is passed as an argument to anther function or when returned from a function:
+
+* You want to use a one-off function and don’t need to give it a name (useful with apply function)
+* You want to create a closure
+```{r}
+#Instead of doing this:
+square <- function(x) x^2
+#You simply do this:
+function(x) x^2
+
+#with apply
+m <- matrix(1:6, nrow = 3)
+apply(m, 1, function(x) sum(x ** 2))
+```
+
+Using anonymous functions to create closures is what you do when you write a function that returns a function (more about that next). You could name the function as follows:
+```{r}
+f <- function(x) {
+  g <- function(y) x + y
+  g
+}
+#But there really isn’t much point if you just want to return it:
+f <- function(x) function(y) x + y
+```
+
+### functions taking functions as arguments
+We already saw this in all the apply examples. You give as an argument to apply a function to be called across dimensions.  
+Say you want to write a function that works like (s/v)apply but only apply an input function on elements that satisfy a predicate.
+```{r}
+apply_if <- function(x, p, f) {
+  result <- vector(length=length(x))
+  n <- 0
+  for (i in seq_along(x)) {
+    if (p(x[i])) {
+      n <- n + 1
+      result[n] <- f(x[i])
+    }
+  }
+  head(result, n)
+}
+apply_if(1:8, function(x) x %% 2 == 0, function(x) x^2)
+```
+
+### Functions returning functions (and closures)
+We create closures when you create a function inside another function and return it. Because this inner function can refer to the parameters and local variables inside the surrounding function even after you have returned from it, you can use such inner functions to specialize generic functions.  
+We can, for instance, write a generic power function and specialize it for squaring or cubing numbers:
+```{r}
+power_n <- function(n) function(x) x^n 
+square <- power_n(2)
+cube <- power_n(3)
+x <- 1:4
+square(x)
+cube(x)
+```
+
+### Filter, map and reduce
+Three patterns are used again and again in functional programming: filtering, mapping, and reducing. In R, all three are implemented in different functions, but you can write all your programs using the Filter, Map, and Reduce functions.  
+The Filter function takes a predicate and a vector or list and returns all the elements that satisfy the predicate.
+```{r}
+is_even <- function(x) x %% 2 == 0
+Filter(is_even, 1:8)
+Filter(is_even, as.list(1:8))
+```
+
+The Map function works like lapply: it applies a function to every element of a vector or list and returns a list of the result. Use unlist to convert it into a vector if that is what you want.
+```{r}
+square <- function(x) x^2
+Map(square, 1:4)
+unlist(Map(square, 1:4))
+```
+Slightly more can be done with Map. since Map can be applied to more than one sequence. If you give Map more arguments then these are applied to the function calls as well.
+```{r}
+plus <- function(x, y) x + y
+unlist(Map(plus, 0:3, 3:0))
+```
+The Reduce function. When you write an expressions like this:
+```r
+a + b + c
+a * b * c
+```
+We can think of this as a series of function calls:
+```r
+`+`(`+`(a, b), c)
+`*`(`*`(a, b), c)
+```
+The Reduce function generalizes this.
+```{r}
+a = 2; b = 3; c = 4
+f <- function(x,y) x+y
+Reduce(f, c(a, b, c))
+#It’s evaluated as follows:
+f(f(a, b), c)
+#Another example - shows the sequence of function calls
+add_parenthesis <- function(a, b) paste("(", a, ", ", b, ")", sep = "")
+Reduce(add_parenthesis, 1:4)
+#Another example - summing
+mysum <- function(x) Reduce(`+`, x)
+mysum(1:4)
+sum(1:4)
+```
+

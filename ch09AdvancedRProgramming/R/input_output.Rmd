@@ -1,0 +1,94 @@
+---
+title: "Input and Output"
+author: "Jindra"
+date: "12/9/2017"
+output: html_document
+---
+### Functions as input and output
+Functions can, of course, take functions as input and return functions as output. This lets you modify functions and create new functions from existing functions. For example, build a generic function for caching results:
+```{r}
+cached <- function(f) {
+  force(f)
+  table <- list()
+
+  function(n) {
+    key <- as.character(n)
+    if (key %in% names(table)) {
+      print(paste("I have already computed the value for", n))
+      table[[key]]
+
+    } else {
+      print(paste("Going to compute the value for", n))
+      res <- f(n)
+      print(paste("That turned out to be", res))
+      table[key] <<- res
+      print(table)
+      res
+    }
+  }
+}
+```
+It takes a function f and will give you another function back that works like f but remembers functions it has already computed. First, it remembers what the input function was by forcing it. The plan is to replace the function in the global scope with a cached version.  
+The rest of the code builds a function that first looks in the table to see if the key is there. If it is, you have already computed the value you want and can get it from the table.
+```{r}
+factorial <- function(n) {
+  if (n == 1) {
+    1
+  } else {
+    n * factorial(n - 1)
+  }
+}
+
+factorial <- cached(factorial)
+factorial(4)
+factorial(1)
+factorial(2)
+factorial(3)
+factorial(4)
+```
+The same can be done on Fibonacci
+```{r}
+fibonacci <- function(n) {
+  if (n == 1 || n == 2) {
+    1
+  } else {
+    fibonacci(n-1) + fibonacci(n-2)
+  }
+}
+
+fibonacci <- cached(fibonacci)
+fibonacci(4)
+fibonacci(1)
+fibonacci(2)
+fibonacci(3)
+fibonacci(4)
+fibonacci(7)
+```
+### Ellipsis parameters
+Ellipsis or “three-dots” parameter is a magical parameter that lets you write a function that can take any number of named arguments and pass them on to other functions.
+```{r}
+f <- function(a, b) NULL
+#f(a = 1, b = 2, c = 3) #ERROR
+#With ellipsis
+g <- function(a, b, ...) NULL
+g(a = 1, b = 2, c = 3)
+```
+We can pass those arguments to other functions that maybe know what to do with them, and that is the purpose of the ... parameter.
+```{r}
+tolist <- function(...) list(...)
+tolist()
+tolist(a = 1)
+tolist(a = 1, b = 2)
+```
+ Example - wrap a function to time how long it takes to run. The function will return the time usage rather than the result of the function.
+```{r}
+time_it <- function(f) {
+  force(f)
+  function(...) {
+    system.time(f(...))
+  }
+}
+ti_mean <- time_it(mean)
+ti_mean(runif(1e6))
+```
+
