@@ -1,0 +1,101 @@
+---
+title: "Class hierarchies"
+author: "Jindra"
+date: "12/9/2017"
+output: html_document
+---
+Polymorphic functions are one aspect of object oriented programming, another is inheritance. This is the mechanism used to build more specialized classes out of more general classes.  
+Quite often the way a class is specialized is exactly by doing an operation that can be done by all objects from the general class, but just in a more specialized way. The specialized classes, however, can potentially do more so they might have more operations that are meaningful to do to them. This kind of specialization is partly interface and partly implementation.
+
+## Specialization as interface
+The interface is which functions we can call on objects of a given class. If we imagine some general class of “fitted models,” we might specify that for all models we should be able to get the fitted parameters and for all models we should be able to make predictions for new values. In R, such functions exist, called coef and predict, and any model is expected to implement them.  
+IF we want to replace a linear regression model with a decision tree regression model, we can just plug in a different fitted model and communicate with it through the same polymorphic functions. The actual functions that will be called when we call the generic functions coef and predict will, of course, be different, but the interface is the same.  
+If we implement the functions that a certain interface expects (and these functions actually do something resembling what the interface expects the functions to do and are not just named the same things), we have a specialization of that interface.
+
+## Specialization as implementations
+Let’s say we want to have a class of objects where we can call functions foo and bar. We can call that class A and define it as follows:
+```{r}
+foo <- function(object, ...) UseMethod("foo")
+foo.default <- function(object, ...) stop("foo not implemented")
+
+bar <- function(object, ...) UseMethod("bar")
+bar.default <- function(object, ...) stop("bar not implemented")
+
+A <- function(f, b) structure(list(foo = f, bar = b), class = "A")
+foo.A <- function(object, ...) paste("A::foo ->", object$foo)
+bar.A <- function(object, ...) paste("A::bar ->", object$bar)
+
+a <- A("qux", "qax")
+foo(a)
+bar(a)
+```
+For a refinement of that, you might want to change how bar works and add another function called baz:
+```{r}
+baz <- function(object, ...) UseMethod("baz")
+baz.default <- function(object, ...) stop("baz not implemented")
+
+B <- function(f, b, bb) {
+  a <- A(f, b)
+  a$baz <- bb
+  class(a) <- "B"
+  a
+}
+
+bar.B <- function(object, ...) paste("B::bar ->", object$bar)
+baz.B <- function(object, ...) paste("B::baz ->", object$baz)
+```
+We want to leave the foo function just the way it is, but if we define the class B as shown, calling foo on a B object gives us an error because it will be calling the foo.default function.
+```{r}
+b <- B("qux", "qax", "quux")
+#foo(b) #ERROR
+```
+The error happens because we haven’t told R that we consider the class B a specialization of class A.  
+We could, of course, make sure that foo called on a B object behaves the same way as when called on an A object by defining foo.B such that it calls foo.A. This wouldn’t be too much work for a single function, but if there are many polymorphic functions that work on A objects, we would have to implement B versions for all of them. Tedious and error-prone work.  
+If only there were a way of telling R that the class B is really an extension of the class A. And there is. If, for B objects, we say that the class is B first and A second, like this:
+```{r}
+B <- function(f, b, bb) {
+  a <- A(f, b)
+  a$baz <- bb
+  class(a) <- c("B", "A")
+  a
+}
+#Then calling foo on a B object—where foo.B is not defined—will call foo.A as its second choice and before defaulting to foo.default:
+b <- B("qux", "qax", "quux")
+foo(b)
+bar(b)
+baz(b)
+```
+The way the class attribute is used with polymorphic functions is that R will look for functions with the class names appended in the order of the class attributes. The first it finds will be the one that is called, and if it finds no specialized version, it will go for the .default version.  
+When we set the class of B objects to be the vector c("B", "A"), we are saying that R should call .B functions first, if it can find one, but otherwise call the .A function. This is a very flexible system that lets you implement multiple inheritances from classes. But the actual code that will be run can be hard to work out if these vectors get too complicated.  
+Another quick word of caution is this: if you give an object a list of classes, you should include the classes all the way up the class hierarchy. If you define a new class, C, intended as a specialization of B, we cannot just say that it is an object of class c("C", "B") if we also want it to behave like an A object.
+```{r}
+C <- function(f, b, bb) {
+  b <- B(f, b, bb)
+  class(b) <- c("C", "B")
+  b
+}
+
+c <- C("foo", "bar", "baz")
+#foo(c) #ERROR
+#it has to be done this way:
+C <- function(f, b, bb) {
+  b <- B(f, b, bb)
+  class(b) <- c("C", "B", "A")
+  b
+}
+
+c <- C("foo", "bar", "baz")
+foo(c)
+bar(c)
+baz(c)
+```
+**We don’t have a real class hierarchy here like we would find in languages like Python, C++, or Java.** We just have a mechanism for calling polymorphic functions, and the semantic here is just to look for them by appending the names of the classes found in the class attribute vector.  
+You are slightly better off getting the class attribute from the object you create in the constructor, though. If, at some point, you changed the class attribute of the object returned from the B() constructor, you don’t want to have to change the class vector in all classes that are extending the class.
+```{r}
+C <- function(f, b, bb) {
+  b <- B(f, b, bb)
+  class(b) <- c("C", class(b))
+  b
+}
+```
+

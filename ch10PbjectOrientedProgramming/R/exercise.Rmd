@@ -1,0 +1,72 @@
+---
+title: "Exrecise"
+author: "Jindra"
+date: "12/11/2017"
+output: html_document
+---
+
+## Shapes
+Imagine that we need to handle some geometric shapes for a program. These could be circles, squares, triangles, etc. We need to know the shapes’ circumferences and areas. These properties can be calculated from properties of the shapes, but the calculations are different for each shape.
+We want (at least) an interface that gives us two functions: circumference and area. The default functions, where we have no additional information about an object aside from the fact that it is a shape, are meaningless so should raise an error.
+```{r}
+#"classes"
+circle <- function(id, diameter, ...) {
+  structure(list(id = id,
+                 diameter = diameter),
+            class = "circle")
+}
+square <- function(id, side_length, ...) {
+  structure(list(id = id,
+                 side_length = side_length),
+            class = "square")
+}
+#"objects"
+a = circle("circle", 2)
+b = square("square", 3)
+
+#circumferance functions
+circumferance <- function(object, ...) UseMethod("circumferance")
+circumferance.default <- function(object, ...) {
+  print("ERROR: No default behavior")
+}
+circumferance.circle <- function(object, ...) {
+  d = 2*pi*object$diameter
+  print(paste("The circumferance of this circle is:", d,
+              sep = " ",
+              collapse = NULL))
+}
+circumferance.square <- function(object, ...) {
+  d = 4 * object$side_length
+  print(paste("The circumferance of this square is:", d,
+              sep = " ",
+              collapse = NULL))
+}
+
+#area functions
+area <- function(object, ...) UseMethod("area")
+area.default <- function(object, ...) {
+  print("ERROR: No default behavior")
+}
+area.circle <- function(object, ...) {
+  d = pi*object$diameter^2
+  print(paste("The area of this circle is:", d,
+              sep = " ",
+              collapse = NULL))
+}
+area.square <- function(object, ...) {
+  d = object$side_length^2
+  print(paste("The area of this square is:", d,
+              sep = " ",
+              collapse = NULL))
+}
+
+#function calls
+circumferance(a)
+circumferance(b)
+circumferance(1)
+area(a)
+area(b)
+area(1)
+
+```
+

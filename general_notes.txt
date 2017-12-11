@@ -12,6 +12,7 @@ HelloWorld("Hello", "World", "!")
 You can also use the <br> tag
 -When you need to use the same random numbers across several part of Rmarkdown, r chunk can be cached
 -Division will return a floating-point number even if both its operands are integers
+-Matrix multiplication is performed with %*%
 -R always works on vectors (a single number is a vector with length = 1)
 -infix operators = classic math: infix addition = 1 + 2 (nothing special)
 -If you read more about R you will soon run into the statement that loops are slow in R (there are typically better solutions in R than to use an explicit loop statement)
@@ -22,6 +23,7 @@ You can also use the <br> tag
 	if (x %% 2 == 0) 5 else 15 #Only first element will be evaluated
 -R’s infix operators. In R, any variable that starts and ends with % is considered an infix operator, so calling x %foo% y amounts to calling `%foo%`(x,y).
 -closure is created when we create a function inside another function and return it
+-OOP in R is very different that Java or Python. Objects in R are immutable and OOP in R is generally connected to polymorphic functions and generic functions
 
 =============================
 literate programming - The idea in literate programming is that the documentation of a program—in the sense of the documentation of how the program works and how algorithms and data structures in the program works—is written together with the code implementing the program

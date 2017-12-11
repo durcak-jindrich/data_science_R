@@ -1,0 +1,129 @@
+---
+title: "Object Oriented Programming"
+author: "Jindra"
+date: "12/9/2017"
+output: html_document
+---
+
+R has three different systems for object oriented programming: S3, S4, and RC. We will only look at S3, which is the simplest and the most widely used.  
+Object orientation in S3 is quite different from what you might have seen in Java or Python. Naturally so, since data in R is immutable and the underlying model in OO in languages such as Java and Python is that you have objects with states that you can call methods to change the state. You don’t have a state as such in S3; you have immutable objects. Just like all other data in R.  
+What’s the point then, of having object orientation if we don’t have object states? What we get from the S3 system is polymorphic functions, called “generic” functions in R. These are functions whose functionality depends on the class of an object—similar to methods in Java or Python where methods defined in a class can be changed in a subclass to refine behavior.  
+You can define a function foo to be polymorphic and then define specialized functions, say foo.A and foo.B. Then calling foo(x) on an object x from class A will actually call foo.A(x) and for an object from class B will actually call foo.B(x).  
+We do not have objects with states; we simply have a mechanism for enabling a function to depend on the class an object has. This is often called “dynamic dispatch” or “polymorphic methods.
+
+## Data structures
+More important than any object oriented system is the idea of keeping related data together so we can treat it as a whole. For data we analyze, we therefore typically keep it in a data frame.  
+The only option we have for collecting heterogeneous data together as a single object is a list. And that is how you do it in R.
+
+## Example bayesian model fitting
+```{r}
+blm <- function(model, alpha = 1, beta = 1, ...) {
+    frame <- model.frame(model, ...)
+    phi <- model.matrix(frame)
+    no_params <- ncol(phi)
+    target <- model.response(frame)
+
+    covar <- solve(diag(alpha, no_params) +
+                   beta * t(phi) %*% phi)
+    mean <- beta * covar %*% t(phi) %*% target
+
+    list(formula = model,
+         frame = frame,
+         mean = mean,
+         covar = covar)
+}
+# fake some data for our linear model                  
+x <- rnorm(10)
+a <- 1 ; b <- 1.3
+w0 <- 0.2 ; w1 <- 3
+y <- rnorm(10, mean = w0 + w1 * x, sd = sqrt(1/b))
+
+# fit a model                  
+model <- blm(y ~ x, alpha = a, beta = b)
+model
+```
+It collects the relevant data of a model fit like this together in a list, so we always know we are working on the values that belong together. This makes further analysis of the fitted model much easier to program.  
+
+The output we got when we wrote:
+```r
+model
+```
+is what we get if we call the print function on a list. The print function is an example of a polymorphic function, however, so when you call print(x) on an object x, the behavior depends on the class of the object x. But changing the class of an existing object is considered bad style. The function that creates the object should assign the class and then we should leave the class of the object alone.
+```{r}
+class(model)
+#If you want to change it, you can use the class<- replacement function:
+class(model) <- "blm"
+model #"blm" is added as a attribute
+```
+We can use any name for a class; here we’ve used blm for Bayesian linear model. By convention, we usually call the class and the function that creates elements of that class the same name
+
+```r
+#but the class of the object should be set in the function instead:
+blm <- function(model, alpha = 1, beta = 1, ...) {
+  # stuff happens here...            
+  object <- list(formula = model,
+                 frame = frame,
+                 mean = mean,
+                 covar = covar)
+  class(object) <- "blm"
+  object
+  
+#we can create the object and set the class at the same time, with structure function
+blm <- function(model, alpha = 1, beta = 1, ...) {
+  # stuff happens here...            
+  structure(list(formula = model,
+                 frame = frame,
+                 mean = mean,
+                 covar = covar),
+            class = "blm")
+}
+}
+```
+
+# Polymorphic functions
+The print function is a polymorphic function. This means that what happens when it is called depends on the class of its first parameter. When we call print, R will get the class of the object, let’s say it is blm as in our case, and see if it can find a function named print.blm.  
+If it can, then it will call this function with the parameters you called print with. If it cannot, it will instead try to find the function print.default and call that.
+Define a blm-specific print function, which is very easy.
+```{r}
+print.blm <- function(x, ...) {
+  print(x$formula)
+}
+#If we print the model now, this is what happens:
+model #Now only formula will be printed
+
+```
+That is how easy it is to define your own class-specific polymorphic function in general. Just take the function name and append .classname to it.  
+One thing you do have to be careful about, though, is the interface to the function. By that I mean the parameters the function takes (and their order). When you define your specialized function, you can add more parameters to your function, but you should define it such that you at least take the same parameters as the generic function does.  
+Implement your function so it takes the same parameters as the generic function. This includes using the same names for parameters.
+
+### Define own polymorphic functions
+Defining class-specific version of a polymorphic function is easy, just write a function with the right name.  
+There is a little bit more to do if you want to define your very own polymorphic function. We also need to write the generic function—the function we will actually call with objects, and that is responsible for dispatching the function call to class-specific functions. We do this using the UseMethod function. The generic function typically just does this and looks like this:
+```{r}
+foo <- function(x, ...) UseMethod("foo")
+```
+Specify a function with the parameters the generic function should accept and then just call UseMethod with the name of the function to dispatch to.  
+When we write the generic function, it is also good style to define the default function as well. With that, we can call the function with all types of objects. If you don’t want that to be possible, a safe default function would be one that throws an error.
+```{r}
+foo.default <- function(x, ...) print("default foo")
+foo("a string")
+foo(12)
+#it can be used for the model like that:
+foo.blm <- function(x, ...) print("blm foo")
+foo(model)
+```
+We can add more parameters to more specialized functions when the generic function takes … as an argument. The generic function will just ignore the extra parameters, but the concrete function that is called might be able to do something about it.
+```{r}
+foo.blm <- function(x, upper = FALSE, ...) {
+  if (upper) {
+    print("BLM FOO")
+  } else {
+    print("blm foo")
+  }
+}
+foo("a string")
+foo(model)
+foo("a string", upper = TRUE)
+foo(model, upper = TRUE)
+```
+
