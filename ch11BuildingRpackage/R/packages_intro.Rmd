@@ -1,0 +1,146 @@
+---
+title: "R packages"
+author: "Jindra"
+date: "12/11/2017"
+output: html_document
+---
+We now know how to write functions and create classes in R, but neither functions nor classes is the unit you use for collecting and distributing R code. That unit is the package.  
+CRAN is the official depository for R packages and the place where the install.packages function finds them.  
+It is packages that we load and import into your namespace when we write this:
+```r
+library(something)
+```
+And it is packages we download when we write this:
+```r
+install.packages("something")
+```
+When creating a new project, at the dialog box where we can set the details of the package. We can choose the Type of the package (where you can choose between a plain package or one that uses Rcpp to make C++ extensions). We can provide existing source files to include in the package. Further, we need to choose a location to put the new package and whether we want to use a git repository for the package.
+
+### Package names
+A package name can consist of letters, numbers, and ., but must start with a letter and must not have . as the last character. We cannot use other characters, such as underscores or dashes.  
+Whenever you build software that you intend for other people to be able to use, be careful with the name you give it. Give it a name that is easy to remember and easy to Google.
+
+### The structure of an R package
+After the package is created, it should have the following structure:  
+2 folders - R, man  
+3 textfiles - .Rbuildignore, DESCRIPTION, NAMESPACE  
+1 project file - "name_of_package".Rproj  
+The text files and the two directories are part of what an R package looks like, and they must always be there with exactly those names.  
+The directory we created contains the source code for the package, but it isn’t the actual package. The package is something we need to build and install from this source code. We will get to how to do that shortly.
+
+**"name_of_package".Rproj**  
+If we open this file in RStudio, we get an open version of the state of the project we had last time we worked on it.
+
+**folders**  
+Inside the R directory there is an example file, called R/hello.R, and inside the man directory, an example documentation1 file, called man/hello.Rd. It is common to have data folder next to R and man folders.
+
+**.Rbuildignore**  
+The .Buildignore file tells R what not to include when it builds a package. Files that are not mentioned here will automatically be included. The filters at CRAN enforce a strict directory and file structure and it is not allowed to include files or directories that do not follow that structure.
+
+**Description**
+This file contains meta-information about the package. It can be updated with our description.  
+
+_Title_: the package title (use Title Case)  
+
+_Version_: number for tracking the versions that were installed. Also useful for dependency management. The convention here is that a released version has the numbering scheme major.minor.patch.  
+
+_Description_: This field should describe the package. It is typically a one-paragraph short description. parse the DESCRIPTION file correctly, you must indent the lines following Description: if the description spans over multiple lines.  
+If you have a development version of your package that you are distributing for those adventurous enough to work with a beta release, the convention is to add a development release number as well. Then the version number looks like major.minor.patch.develop-number, where by convention the last number starts at 9000 and is increased with every new release. The first version can therefore be 0.0.0.9000.  
+
+_Author and Maintainer_: Delete these two fields. There is a better way to specify the same information that makes sure that it is provided in a more structured form. You should use a new field called Authors@R: instead. This field takes an R expression specifying one or more authors. Check the documentation for the function (?person) for more details.
+For a single author, so you should use something like this:
+```r
+Authors@R: person("First Name", "Last Name",
+                  email = "your.email@your.domain.com",
+                  role = c("aut", "cre"))
+```
+The roles here means author and creator.  
+
+_License_: This specifies the software license the package is released under. It can really be anything, but if you want to put your package on CRAN, you have to pick one of the licenses that CRAN accepts:
+<https://cran.r-project.org/web/licenses/>  
+
+_Type, Date, LazyData_: The Type and LazyData fields are not essential. You can delete them if you want. Type is just saying that you have a package but we sort of know that already. LazyData tells R that if you include data in your package, it should load it lazily. Date should be the last time you modified the package.  
+
+_URL and BugReports_: If you have a web page for the package and a URL for reporting bugs, these are the fields you want to use. They are not required for a package, but are of course very helpful for the users to have.  
+
+_Dependencies_: If your package has dependencies, you have three fields you can specify them in: Depends, Imports, and Suggests. With Depends, you can specify both packages that need to be installed for your package to work and which version of R is required for your package to work. For packages, though, it is better to use Imports and Suggests than Depends, so use Depends only to specify which version of R you need (Depends: R (>= 2.10)). The syntax for dependencies is a comma-separated list of package names.  
+Packages in the Imports or Suggests lists are not imported into your namespace the way they would be if you call library(package). This is to avoid contaminating your package namespace, and you shouldn’t break that by calling library yourself. If you want to use functions from other packages, you must do so by explicitly accessing them through their package namespace or by explicitly importing them at a single-function level. The way to access a function from another package without importing the package namespace is using the :: notation (the packages named in the Suggests field).  
+A way of checking if a package is installed before we use it is the function requireNamespace. It returns TRUE if the namespace (package) you ask for is installed and FALSE otherwise.  
+```r
+#The quietly option is to prevent it from printing warnings. We are handling the cases where the package is not installed, so there is no need for it to print warnings.
+if (requireNamespace("package", quietly = TRUE)) {
+    # use package functionality              
+} else {
+    # do something that doesn't involve the package              
+    # or give up and throw an exception with stop()              
+}
+```
+
+**NAMESPACE**  
+Provide information about which of the functions we implement in your package should be exported to the namespace of the users when they write library(test). Each package has its own namespace. Functions you write in a package will look for other functions first in the package namespace and then in the global namespace.  
+User can only get access to functions (and other objects) explicitly exported.5 If a function is not explicitly exported, it is considered an implementation detail of the package that code outside the package should not be able to be accessed.
+By default it looks like this:
+```r
+#It is just exporting anything that has an alphanumeric name
+exportPattern("^[[:alpha:]]+")
+```
+We are not going to edit this file manually since we can export functions (and all other objects) much easier using Roxygen.  
+
+**R/ and MAN/**  
+The R/ directory is where you should put all your R code.  
+The man/ directory is where the package documentation goes.  
+There is one example file in both directories just after RStudio generates your new package. We will use Roxygen to document functions, and then Roxygen will automatically make the files that go in man/.
+
+## Roxygen
+Roxygen is a system for writing documentation for our packages. If you are familiar with Javadoc, you will recognize its syntax . It does a few things more, however, including handling your namespace import and export, as we will see.
+```{r}
+#install.packages("roxygen2")
+```
+Go into the Build menu and select Configure Build Tools. Pick Build Tools and check Generate Documentation with Roxygen. In the dialog box that pops up, check Build & Reload. This ensures that Roxygen is used to generate documentation and that the documentation is generated when you build the package. This will also ensure that Roxygen handles the import and export of namespaces.  
+
+**Documenting functions**  
+The documentation for functions are provided in comments above the functions, but comments starting with the characters #' instead of just #. This is what tells Roxygen that these comments are part of the documentation that it should process.
+The first line becomes the title of the documentation for the function. It should be followed by an empty line (still in #' comments). The text that follows is a description of the function. Normally there few paragraphs describing what the function does and how it is supposed to be used.  
+The lines that start with an @ tag—e.g., @param and @return—contain information for Roxygen. They provide information that is used to make individual sections in the documentation.  
+The @param tags are used for describing parameters. That tag is followed by the name of a parameter and then a short description of the parameter. The @return tag provides a description of what the function returns.  
+```{r}
+#' Add two numbers                
+#'                
+#' This function adds two numbers together.                
+#'                
+#' @param x  A number                
+#' @param y  Another number                
+#' @return The sum of x and y                
+#'                
+#' @export                
+add <- function(x, y) x + y
+```
+After you have written some comments in Roxygen, you can build it by choosing Build ➤ Document. A new file with function_name.Rd wil be generated in the man/ folder and NAMESPACE file will be updated (if Roxygen created this file, otherwise it is not overwritten).  
+**This approach generates documentation only for plain R files. It doesn't work with R Markdown.**  
+In the NAMESPACE file, you should see that your documented function is explicitly exported. That is because we provided the @export tag with the documentation. It tells Roxygen to export it from the package namespace. This is the easiest way to handle the namespace export, without manually exporting functions.  
+Roxygen will also ensure that polymorphic functions and other kinds of objects are correctly exported if you use the @export tag.  
+Roxygen can also handle import of namespaces. Remember that the packages you list in your Imports field in the DESCRIPTION file are guaranteed to be installed on the computer where your package is installed but that the namespaces of these packages are not imported. You have to use the :: notation to access them. With Roxygen you can use the @importFrom package object tag to import object (typically a function) into your namespace. For normal functions, I don’t really see the point of using this feature since it isn’t shorter than just using the :: notation. For infix functions, though, it makes them easier to use.  
+So in the following function, you can use the %>% operator from dplyr because you import it explicitly. You cannot really get to infix operators otherwise.
+```r
+#' Example of using dplyr                
+#'                
+#' @param data A data frame containing a column named A                
+#' @param p    A predicate function                
+#' @return The data frame filtered to those rows where p is true on A                
+#'                
+#' @importFrom dplyr filter                
+#' @importFrom dplyr %>%                
+#' @export                
+filter_on_A <- function(data, p) {
+  data %>% filter(p(A))
+}
+```
+If you write a function that uses a lot of functionality from a package, you can also import the entire namespace of that package:
+```r
+#' @import dplyr                
+#' @export                
+filter_on_A <- function(data, p) {
+  data %>% filter(p(A))
+}
+```
+

@@ -1,0 +1,44 @@
+---
+title: "Functions and data with packages"
+author: "Jindra"
+date: "12/13/2017"
+output: html_document
+---
+
+## Package scope vs global scope
+A package has its own namespace where its functions live. Functions that are called from other functions written inside a package are first looked for in the package namespace before they are looked for in the global namespace.  
+If you write a function that uses another function from your package and someone redefines the function in the global namespace after loading your package, it doesn’t change what function is found inside your package. It doesn’t matter if a function is exported or local to a package for this to work. R will always look in a package namespace before looking in the global namespace.
+
+## Internal functions
+You might not want to export all functions you write in a package. If there are some functions, you consider implementation details of your package design, you shouldn’t export them. If you do, people might start to use them, and you don’t want that if it is functionality you might change later on when you refine your package.  
+**Making functions local, though, is pretty easy. You just don’t use the @export tag.** Then they cannot be accessed from outside the package.  
+It is usually easiest to find the right file to edit if you have one file for each (major) function or class, but it is mostly a matter of taste. It also shouldn’t matter in which files you place various functions—whether internal or exported—since they will all be present in the package namespace.  
+## Adding Data to Your Package
+It is not uncommon for packages to include some data, either data used by the package implementation or more commonly data used for example purposes. This data goes in the data/ directory. You cannot use any old format for your data. It has to be in a file that R can read, typically .RData files. The easiest way to add data files, though, is using functionality from the devtools package (use_data(variable_name) function and then it can be used with the classic data(variable_name)).  
+You cannot add documentation for data directly in the data file, so you need to put it in an R file in the R/ directory. People usually have a file called data.R that they use for documenting package data. For example:
+```r
+#' Statistics for populations of bears              
+#'              
+#' Computed $f_4(W,X;Y,Z)$ statistics for different              
+#' populations of bears.              
+#'              
+#' @format A data frame with 19 rows and 6 variables:              
+#' \describe{              
+#'  \item{W}{The W population}              
+#'  \item{X}{The X population}              
+#'  \item{Y}{The Y population}              
+#'  \item{Z}{The Z population}              
+#'  \item{D}{The $D$ ($f_4(W,X;Y,Z)$) statistics}              
+#'  \item{Z.value}{The blocked jacknife Z values}              
+#' }              
+#'              
+#' @source \url{http://onlinelibrary.wiley.com/doi/10.1111/mec.13038/abstract}              
+#' @name bears              
+#' @docType data              
+#' @keywords data              
+NULL
+```
+NULL at the end is needed for Roxygen purposes. @name tag that tells it that this documentation is actually for the bears object. The @docType tells it that this is data that we are documenting. The @source tag tells us where the data is from. The @format tag is the only complicated tag here. It describes the data, which is a data frame, and it uses markup that looks very different from Roxygen markup text, it looks more like latex.  
+
+## Building a package
+Select tab Build in upper right corner. There are three choices in the toolbar—Build & Reload, Check, and More. The first builds and (re)loads your package, the second checks it, meaning it runs unit tests if you have written any and then checks for consistency with CRAN rules, and the third gives you various other options in a drop-down menu.

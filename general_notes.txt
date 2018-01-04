@@ -14,7 +14,7 @@ You can also use the <br> tag
 -Division will return a floating-point number even if both its operands are integers
 -Matrix multiplication is performed with %*%
 -R always works on vectors (a single number is a vector with length = 1)
--infix operators = classic math: infix addition = 1 + 2 (nothing special)
+-infix operators = classic math: infix addition = 1 + 2 (nothing special). %>% is also infix operator
 -If you read more about R you will soon run into the statement that loops are slow in R (there are typically better solutions in R than to use an explicit loop statement)
 -R is a so-called functional language (among other things) and in functional languages, you typically don’t use loops
 -There is a separate assignment operator, <<-, you can use for that. It will not create a new local variable but instead search outward to find an existing variable and assign to that. If it gets all the way to the outermost global scope, though, it will create the variable there if it doesn’t already exist. (this can be used for simple getter + setter for example)
@@ -24,6 +24,7 @@ You can also use the <br> tag
 -R’s infix operators. In R, any variable that starts and ends with % is considered an infix operator, so calling x %foo% y amounts to calling `%foo%`(x,y).
 -closure is created when we create a function inside another function and return it
 -OOP in R is very different that Java or Python. Objects in R are immutable and OOP in R is generally connected to polymorphic functions and generic functions
+-When writing packages, don't export every sigle function, because people then might use them. The functionality might change over time. Making functions local, though, is pretty easy. You just don’t use the @export tag.
 
 =============================
 literate programming - The idea in literate programming is that the documentation of a program—in the sense of the documentation of how the program works and how algorithms and data structures in the program works—is written together with the code implementing the program
