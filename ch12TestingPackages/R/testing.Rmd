@@ -1,0 +1,116 @@
+---
+title: "Testing"
+author: "Jindra"
+date: "1/5/2018"
+output: html_document
+---
+
+To build robust software you need to approach testing more rigorously. You should check all your code anytime you make any changes to it.  
+Testing which we do when we want to make sure that the code we just wrote is working as intended is called unit testing. The testing we do when we want to ensure that changes to the code do not break anything is called regression testing.  
+## Unit testing
+Unit testing is called that because it tests functional units. In R, that essentially means single functions or a few related functions. Whenever you write a new functional unit, you should write test code for that unit as well. The test code is used to check that the new code is actually working as intended and if you write the tests such that they can be run automatically later on you have also made regression tests for the unit at the same time.
+```{r}
+area <- function(x) UseMethod("area")
+circumference <- function(x) UseMethod("circumference")
+
+rectangle <- function(width, height) {
+    structure(list(width = width, height = height),
+              class = c("rectangle", "shape"))
+}
+area.rectangle <- function(x) x$height * x$width
+circumference.rectangle <- function(x) 2 * x$height + 2 * x$width
+
+# a simple control
+r <- rectangle(width = 2, height = 4)
+area(r)
+circumference(r)
+```
+We are testing the code by calling the functions and looking at the printed output. We don’t want to test the functions that way forever, we want to automate them.
+
+## Automated testing
+By default, there is no special way of writing tests in R like for example in Java and its @Test notation (but there are some frameworks that can be used). All it takes is create test.R files and store them in folder tests/.  
+Scripts in the tests/ directory will also be automatically run whenever you do a consistency check of the package. That is what happens when you click Check in the Build tab on the right in RStudio or select Check Package in the Build menu, but it does a lot more than just run tests so it is not the most efficient way of running the tests.
+```{r}
+r <- rectangle(width = 2, height = 4)
+if (area(r) != 2*4) {
+  stop("Area not computed correctly!")
+}
+if (circumference(r) != 2*2 + 2*4) {
+  stop("Circumference not computed correctly!")
+}
+```
+
+### testthat framework
+There are some frameworks for formalizing this type of testing in R. For example a framework called testthat. With this framework it is easy to run tests (without the full package check) and easy to write tests in a more structured manner—of course at the cost of having a bit more code to write for each test.  
+This framework provides functions for writing unit tests and makes sure that each test is run in a clean environment (so you don’t have functions defined in one test leak into another because of typos and such). It needs a few modifications to your DESCRIPTION file and your directory structure, but you can automatically make these adjustments by running the following:
+```{r}
+devtools::use_testthat()
+```
+This adds testthat to the Suggests packages, makes the directory tests/testthat and the file tests/testthat.R. This file's purpose is to make sure that the package testing—that runs all scripts in the tests/ directory—will also run all the testthat tests.  
+The testthat tests should all go in the tests/thestthat directory and in files whose names start with test. Otherwise, testthat cannot find them.  
+The tests are organized in contexts and tests to make the output of running the tests more readable—if a test fails, you don’t just want to know that some test failed somewhere, but you want some information about which test failed and where, and that is provided by the contexts.  
+
+At the top of your test files, you set a context using the context function. It just gives a name to the following batch of tests. This context is printed during testing so you can see how the tests are progressing and if you keep to one context per file, you can see in which files tests are failing.  
+The next level of tests is wrapped in calls to the test_that function. This function takes a string as its first argument, which should describe what is being tested. Its second argument is a statement that will be the test. The statement is typically more than one single statement, and in that case, it is wrapped in {} brackets.  
+Here, testthat also provides a whole suite of functions for testing if values are equal, almost equal, if an expression raises a worning, triggers an error, and much more. All these functions start with expect_ and you can check the documentation for them in the testthat documentation.  
+The test for computing the area and circumference of rectangles would look like this in a testthat test:
+```r
+context("Testing area and circumference")
+
+test_that("we compute the correct area and circumference", {
+  r <- rectangle(width = 2, height = 4)
+
+  expect_equal(area(r), 2*4)
+  expect_equal(circumference(r), 2*2 + 2*4)
+})
+```
+You should always worry a little bit when testing equality of numbers, especially if they are floating-point numbers. Computers do not treat floating-point numbers the way mathematics treat real numbers. Because floating-point numbers have to be represented in finite memory, the exact number you get depends on how you compute it, even if mathematically two expressions should be identical. This can be the case with for example _pi_:
+```r
+circle <- function(radius) {
+    structure(list(r = radius),
+              class = c("circle", "shape"))
+}
+area.circle <- function(x) pi * x$r**2
+circumference.circle <- function(x) 2 * pi * x$r
+test_that("we compute the correct area and circumference", {
+  radius <- 2
+  circ <- circle(radius = radius)
+
+  expect_equal(area(circ), pi * radius^2)
+  expect_equal(circumference(circ), 2 * radius * pi)
+})
+```
+Here I use the built-in pi but what if the implementation used something else? Here we are definitely working with floating-point numbers, and we shouldn’t ever test for exact equality.  
+**Well, the good news is that expect_equal doesn’t**. It tests for equality within some tolerance of floating-point uncertainty—that can be modified using an additional parameter to the function—so all is good. To check exact equality, you should instead use the function expect_identical, but it is usually expect_equal that you want.  
+It is always good to think about special cases. For the shapes, it isn’t meaningful to have non-positive dimensions, so in my implementation I raise an error if I get that and a test for it, for rectangles, could look like this:
+```r
+test_that("Dimensions are positive", {
+  expect_error(rectangle(width = -1, height =  4))
+  expect_error(rectangle(width =  2, height = -1))
+  expect_error(rectangle(width = -1, height = -1))
+
+  expect_error(rectangle(width =  0, height =  4))
+  expect_error(rectangle(width =  2, height =  0))
+  expect_error(rectangle(width =  0, height =  0))
+})
+```
+### Using random numbers for testing
+Another good approach to testing is to use random data. With tests we manually set up, we have a tendency to avoid pathological cases because we simply cannot think them up. Random data doesn’t have this problem. Using random data in tests can, therefore, be more efficient, but of course, it makes the tests non-reproducible which makes debugging extremely hard.  
+You can, of course, set the random number generator seed. That makes the test deterministic and reproducible, but defeats the purpose of having random tests to begin with.
+There is really not a good solution to this, but we can use this trick: Pick a random seed, remember it and set the seed. Since we now know what the random seed was, we can set it again if the test fails and debug from there. You can save the seed by putting it in the name of the test. Then if the test fails, you can get the seed from the error message:
+```r
+seed <- as.integer(1000 * rnorm(1))
+test_that(paste("The test works with seed", seed), {
+  set.seed(seed)
+  # test code that uses random numbers            
+})
+```
+### Testing random results
+Another issue that pops up when we are working with random numbers is what the expected value that a function returns should be. If the function is not deterministic but depends on random numbers, we don’t necessarily have an expected output.  
+We cannot get absolute certainty when the results are actually random. If a test fails a single time, I wouldn’t worry about it, but if we see it fail a couple of times, it becomes less likely that it is just a fluke, so then we would explore what is going on.
+
+## Checking a package for consistency
+The package check we can do by clicking Check in the Build tab on the right in RStudio, or the Check Package in the Build menu, runs the unit tests and does a whole lot more.  
+It calls a script that runs a large number of consistency checks to make sure that your package is in tiptop shape. It verifies that all your functions are documented, that your code follows certain standards, that your files are in the right directories (and that there aren’t files where there shouldn’t be), that all the necessary meta-information is provided, and many many more things.  
+You should try to run a check for your packages. It will write a lot of output and, in the end, it will inform you about how many errors, warnings, and notes it found.  
+If the check raises any flags, you will not be allowed to put it on CRAN. At least not without a very good excuse.
