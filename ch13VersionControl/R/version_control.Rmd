@@ -1,0 +1,57 @@
+---
+title: "Version control"
+author: "Jindra"
+date: "1/8/2018"
+output: html_document
+---
+There are two ways of version control in R - SVN and git. Git is more widely used and it is usually also considered as the better option for version control.
+ 
+## General version controlling
+There are two main purposes of using a version control system when you develop software. One is simply to keep track of changes, so that you can later check when which modifications were made to your source code, and if you discover that they were in error, revert to earlier versions to try a different approach.  
+The other job a version control system typically does is that it makes it easier for you to collaborate with others.  
+ You make changes to your local repository while developing a feature but when you are done you push those changes to the global repository. Or if you do not have permission to make changes to the global repository—perhaps because you cloned someone else’s code and made changes to that—ask someone who does have permission to pull your changes into the repository. This is known as a “pull request”.
+ 
+## Git in Rstudio
+If this is the first time you have accessed this panel, the status will contain a yellow question mark for all files you have modified since you created the object (including files that RStudio made during the package creation). This status means that git doesn’t know about these files yet. It can see that the files are there, but you have never told it what to do about them.  
+The Staged column has check boxes for all the files. If you click one, the status for that file changes to a green “A”. When you do it for a directory, all the files in that directory will also be staged for adding.  
+Generally, committing will only affect changes we have staged. This lets you commit only some of the changes you have made to your source code, which can be helpful at times. To commit the changes you now have to click the Commit button in the toolbar.  
+If you stage a file for commit here, the status is still M, but RStudio indicates that it is now staged by moving the M to the left a little. Not that you really need that feedback, because you can also see that it is staged from the checked staged button of course.  
+
+### bare repository
+This is a repository that doesn’t include the local source code; it isn’t really special, but it prevents you from making local changes to it. You can only update it with changes from other repositories.
+```bash
+git --bare init
+```
+
+## Typical work flow
+Having a development branch and a master branch is a typical core of the repository structure, but it is also very common to make a branch for each new feature you implement. Typically, you branch these off the develop branch when you start working on the feature and merge them back into develop when you are done.
+It is also common to have a separate branch for each bug fix—typically branched off master when you start implementing the fix and then branched back into the master as well as into develop when you are done. After a bud/feature is resolved, the branch should be deleted, so branches don't clutter the repository.
+```bash
+git branch -d branch_name
+```
+If you want a local branch to exist on the global repository as well—so you can push to it, and so collaborators can check it out—you need to create a branch in that repository and set up a link between your local repository and the global repository.
+```bash
+git push --set-upstream origin branch_name
+```
+This pushes the changes and also remembers that the branch is linked to the local branch in origin.
+
+## Installing packages from github
+The requirements for putting packages on CRAN are much stricter than for putting R packages on GitHub, and you are not allowed to upload new versions to CRAN very often, so for development versions of your R package, GitHub is an excellent alternative.  
+To install a package from GitHub, you need to have the devtools package installed, as follows:
+```bash
+install.packages("devtools")
+```
+After that, you can install a package named packagename written by the GitHub user username with this command:
+```bash
+devtools::install_github("username/packagename")
+```
+The repositories you make on GitHub are by default only editable by yourself. Anyone can clone them to get the source code, but only you can push changes to the repository.  
+One way to collaborate with others is to give them write permissions to the repository.  
+To avoid too much confusion, when different collaborators are updating the code, it is useful to have some discipline in how changes are merged into the master (and/or the develop) branch. One approach that is recommended and supported by GitHub is to make changes in separate branches and then use so-called pull requests to discuss changes before they are merged into the main branches.
+
+### pull requests
+The workflow for making pull requests is to implement new features or bug fixes or whatever you are implementing on separate branches from develop or master. Then, instead of merging them directly, you create what is called a pull request.
+
+## Forking a repository
+Another way of collaboration si forking, which is basically copying of repository. Technically, forking isn’t different from cloning—except that you’re making a bare repository—and the terminology is taken from open source software where forking a project means making your own version and developing it independently of previous versions.  
+Once you have made the copy, you can clone it to your computer and make changes to it, as you can with any other repositories. The only way this repository is different from a repository you made yourself, is that when you make pull requests, GitHub knows that you forked it off another repository. So when you make a pull request, you can choose not only the Base and Compare branches, but also the base fork and the head fork—the former being the repository you want to merge changes into, and the latter the repository where you made your changes.
