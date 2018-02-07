@@ -1,0 +1,71 @@
+---
+title: "Switching to C++"
+author: "Jindra"
+date: "1/27/2018"
+output: html_document
+---
+
+This is a drastic step, but by switching to a language such as C++, you have more fine-grained control over the computer. Of course, this also means that you don’t have many of the features that R does, so you don’t want to program an entire analysis in C++, but you might want to translate the time-critical code to C++.
+
+### Rcpp package
+Luckily, the Rcpp package makes integrating R and C++ pretty straightforward. The only thing to really be careful about is that C++ index from 0 and R from 1. Rcpp takes care of converting this so a 1 indexed vector from R can be accessed as a 0 indexed vector in C++, but when translating code you have to keep it in mind.  
+When we have a relatively simple function that is not using any of R’s advanced features it is ideal to translate into C++.  
+```{r}
+#install.packages("Rcpp")
+library(Rcpp)
+cppFunction("
+NumericVector smooth_weights_iteration_cpp(List g,
+                             NumericVector node_weights,
+                             double alpha)
+{
+  NumericVector new_weights(g.length());
+
+  for (int i = 0; i < g.length(); ++i) {
+
+    IntegerVector neighbours = g[i];
+    double neighbour_sum = 0.0;
+    int n = 0;
+
+    for (int j = 0; j < neighbours.length(); ++j) {
+      neighbour_sum += node_weights[j];
+      ++n;
+    }
+
+    if (n > 0) {
+      new_weights[i] = alpha * node_weights[i] +
+        (1-alpha) * (neighbour_sum / n);
+    } else {
+      new_weights[i] = node_weights[i];
+    }
+  }
+
+  return new_weights;
+}
+")
+```
+
+This code creates a function with the same name as the C++ function that can be called directly from R and Rcpp will take care of converting types as needed.
+```{r}
+smooth_weights_cpp <- function(graph, node_weights,
+                               alpha, no_iterations) {
+  new_weights <- node_weights
+  for (i in 1:no_iterations) {
+    new_weights <- smooth_weights_iteration_cpp(graph, new_weights, alpha)
+  }
+  new_weights
+}
+```
+
+If we compare the R and C++ function, we see that we get a substantial performance boost from this.  
+```{r}
+library(microbenchmark)
+microbenchmark(
+  smooth_weights(g, weights, 0.8, 10),
+  smooth_weights_cpp(g, weights, 0.8, 10),
+  times = 5
+)
+```
+
+
+If you have a few performance hotspots in your code that are relatively simple, just very time-consuming because they do a lot of work, it is worth considering translating these to C++ and Rcpp makes it easy.  
+Don’t go overboard, though. It is harder to profile and debug code in C++, and it is harder to refactor your code if it is a mix of C++ and R. Use it, but use it only when you really need it.

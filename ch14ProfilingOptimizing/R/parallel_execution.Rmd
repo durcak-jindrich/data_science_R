@@ -1,0 +1,64 @@
+---
+title: "Parallel execution"
+author: "Jindra"
+date: "1/27/2018"
+output: html_document
+---
+Sometimes you can speed things up, not by doing them faster, but by doing many things in parallel. Most computers today have more than one core, which means that you should be able to run more computations in parallel. These are usually based on some variation of lapply() or Map()or similar, see the parallel package as an example, but also check the foreach package.  
+Parallelization works better when each task runs longer so the threads don’t have to communicate so often.  
+
+### Example
+For an example where parallelization works better, we can consider fitting a model on training data and testing its accuracy on test data. We can use the cars data we have looked at before and the partition() function used earlier.  
+We write a function that evaluates a single train/test partition and then calls it n times, either sequentially or in parallel.  
+```{r}
+library(dplyr)
+library(Metrics)
+library(parallel)
+data(cars)
+random_group <- function(n, probs){
+  probs <- probs/sum(probs)
+  g <- findInterval(seq(0,1,length = n),
+                     c(0, cumsum(probs)),
+                     rightmost.closed = TRUE)
+  names(probs[sample(g)])
+}
+partition <- function(df, n , probs){
+  replicate(n, split(df, random_group(nrow(df), probs)), FALSE)
+}
+test_rmse <- function(data) {
+  model <- data$training %>% lm(dist ~ speed, data = .)
+  predictions <- data$test %>% predict(model, data = .)
+  rmse(data$test$dist, predictions)
+}
+
+sample_rmse <- function (n) {
+  random_cars <- cars %>% partition(n, c(training = 0.5, test = 0.5))
+  unlist(Map(test_rmse, random_cars))
+}
+
+sample_rmse_parallel <- function (n) {
+  random_cars <- cars %>% partition(n, c(training = 0.5, test = 0.5))
+  cl <- makeCluster(2, type = "FORK")
+  unlist(clusterMap(cl, test_rmse, random_cars))
+}
+```
+
+When I do this for 10 training/test partitions, the two functions take roughly the same time. Maybe the parallel version is a little slower, but it is not much overhead this time.  
+If I create 1000 train/test partitions instead, however, the parallel version starts running faster than the sequential version.  
+```{r}
+library(microbenchmark)
+microbenchmark(
+  sample_rmse(10),
+  sample_rmse_parallel(10),
+  times = 5
+)
+
+microbenchmark(
+  sample_rmse(1000),
+  sample_rmse_parallel(1000),
+  times = 5
+)
+```
+
+Reaching the possible optimal speed-up from parallelization is rarely possible. If a computer has two cores, then it theoretically can run the code twice as fast.  
+The communication overhead between threads adds to the time used for the parallel version, and there are parts of the code that just has to be sequential such as preparing data that all threads should work on.

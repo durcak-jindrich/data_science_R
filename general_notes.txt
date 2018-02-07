@@ -26,6 +26,14 @@ You can also use the <br> tag
 -OOP in R is very different that Java or Python. Objects in R are immutable and OOP in R is generally connected to polymorphic functions and generic functions
 -When writing packages, don't export every sigle function, because people then might use them. The functionality might change over time. Making functions local, though, is pretty easy. You just don’t use the @export tag.
 
+-formulas: For the linear model, we would write y ∼ x. The intercept variable is implicitly there; you don’t need to tell R that you want the feature vector to include the “-1”, instead, you would have to remove it explicitly. You can also specify polynomial feature vectors, but R interprets multiplication, *, as something involving interaction between variables.1 To specify that you want the second order polynomial of x, you need to write y ∼ I(x^2) + x.
+-to save formula in variable: formula <- y ∼ x + z; 2 predictor variables x,z and 1 response variable (or target vector) y 
+
+-The thing we do when we fit models in Bayesian statistics is that we take a prior distribution of our model parameters, P(θ), and update them to a posterior distribution, P(θ | D), when observing data D.
+-Think of it this way: the prior distribution is what we just know about the parameters. Okay, typically we just make the prior up based on mathematical convenience, but you should think about it as what we know about the parameters from our understanding of how the universe works and what prior experience has taught us. Then when you observe more, you add information about the world that changes the conditional probability of how the parameters look given the observations you have made.
+
+-It is customary to also have a README and a NEWS file in your package. The README file describes what your package does and how and can be thought of as a short advertisement for the package, while the NEWS file describes which changes you have made to your package over time (typically named README.md and NEWS.md).
+
 =============================
 literate programming - The idea in literate programming is that the documentation of a program—in the sense of the documentation of how the program works and how algorithms and data structures in the program works—is written together with the code implementing the program
 - R Markdown (for writing these documents) and knitr (for running the analysis and generating the reports)
@@ -89,3 +97,10 @@ ggplot2
 	- scale_fill_manual(values = c("red", "green", "blue")) - used for boxplots
 	- scale_fill_brewer(palette = "Greens") - predefined palette of colors
 - typical usecase: cars %>% ggplot(aes(x = speed, y = dist)) + geom_point()
+
+=============================
+further steps:
+The art of data science by Roger Peng and Elizabeth Matsui
+Pattern matching and machine learning by Christopher Bishop
+Linear models in R by Julian J. Faraway (Linear models and generalized linear models are the first things I try. Pretty much always.)
+ggplot2: Elegant Graphics for Data Analysis by Hadley Wickham
