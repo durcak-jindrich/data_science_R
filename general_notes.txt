@@ -42,6 +42,8 @@ literate programming - The idea in literate programming is that the documentatio
 - if a package is loaded into current project, it's functions will work when a chunk of code is run. But if knit is used to build HTML from the markdown file, the import of that file needs to be specifically done in the markdown file (library(package))
 
 factors
+-The term factor refers to a statistical data type used to store categorical variables. The difference between a categorical variable and a continuous variable is that a categorical variable can belong to a limited number of categories (= factor levels, = enumerated type). A continuous variable, on the other hand, can correspond to an infinite number of values.
+-There are two types of categorical variables: a nominal categorical variable (without an implied order, e.g. "Elephant", "Giraffe", "Donkey", "Horse") and an ordinal categorical variable (can be ordered "Low", "Medium", "High"). By default, R returns NA when you try to compare values in a factor.
 -It is not strictly necessary to specify the levels in the factor() call, but I prefer always to do so explicitly. If there is an unexpected string in the input to factor(), it would end up being one of the levels, and I wouldn’t know about it until much later. Specifying the levels explicitly alleviates that problem.
 
 magrittr
