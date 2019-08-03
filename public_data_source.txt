@@ -1,0 +1,7 @@
+https://data.europa.eu/euodp/en/home
+https://www.data.gov/
+https://www.who.int/gho/en/
+https://www.pewinternet.org/instructions-for-downloading-datasets/
+https://developer.nytimes.com/
+https://www.google.com/publicdata/directory
+https://registry.opendata.aws/

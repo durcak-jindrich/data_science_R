@@ -1,0 +1,5 @@
+https://www.datakind.org/refix: /anaconda3/envs/tool_compound_ml
+http://www.tapestryconference.com/
+https://www.predictiveanalyticsworld.com/
+https://conferences.oreilly.com/strata
+https://www.kaggle.com/
